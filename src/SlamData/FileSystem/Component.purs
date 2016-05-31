@@ -107,13 +107,13 @@ render state@{ version, sort, salt, path } =
             [ P.classes [ Rc.header, B.clearfix ] ]
             [ icon B.glyphiconFolderOpen Config.homeHash "Browse root folder"
             , logo version
-            , H.slot' cpSearch unit \_ ->
-                { component: Search.comp
-                , initialState: Search.initialState sort salt
-                }
             , H.slot' cpSignIn unit \_ ->
                 { component: SignIn.comp
                 , initialState: installedState SignIn.initialState
+                }
+            , H.slot' cpSearch unit \_ ->
+                { component: Search.comp
+                , initialState: Search.initialState sort salt
                 }
             ]
         ]
