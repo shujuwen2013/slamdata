@@ -146,21 +146,21 @@ render state =
               [ icon' B.glyphiconChevronLeft "Back to parent folder"
                 $ fromMaybe "" (state ^. _parentHref)
               , logo (state ^. _version)
-              , H.slot' cpRename unit \_ ->
-                  { component: Rename.comp
-                  , initialState: Rename.initialState
-                  }
               , H.slot' cpSignIn unit \_ ->
                   { component: SignIn.comp
                   , initialState: installedState SignIn.initialState
                   }
-              , H.div
-                  [ P.classes $ [ className "sd-menu" ] <> visibilityClasses ]
-                  [ H.slot' cpMenu MenuSlot \_ ->
-                    { component: HalogenMenu.menuComponent
-                    , initialState: installedState $ Menu.make SM.empty
-                    }
-                  ]
+              , H.slot' cpRename unit \_ ->
+                  { component: Rename.comp
+                  , initialState: Rename.initialState
+                  }
+              ]
+          , H.div
+              [ P.classes $ [ className "sd-menu" ] <> visibilityClasses ]
+              [ H.slot' cpMenu MenuSlot \_ ->
+                { component: HalogenMenu.menuComponent
+                , initialState: installedState $ Menu.make SM.empty
+                }
               ]
           ]
       ]

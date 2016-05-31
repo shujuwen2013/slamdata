@@ -10,22 +10,21 @@ nav {
     }
 
     .header {
-
         line-height: 70px;
+        max-height: 70px;
 
         .nav-icon {
             float: left;
-            width: 80px;
-            height: 70px;
             text-align: center;
-
-            // padding-left: 14px;
-            // padding-top: 5px;
+            margin: 0 1.4rem 0 1.4rem;
             a {
+                i {
+                  width: 32px;
+                  height: 32px;
+                }
                 font-size: 22px;
                 color: #fff;
                 opacity: 0.8;
-                display: block;
                 &:hover {
                     opacity: 1;
                 }
@@ -39,18 +38,15 @@ nav {
             }
             float: left;
             width: 140px;
-            margin-top: -7px;
-            margin-left: -5px;
-        }
-
-        .notebook-name, .search {
-            margin-left: 24px;
-            float: left;
+            margin: -7px 1.5rem 0 -7px;
+            @media (max-width: 720px) {
+              display: none;
+            }
         }
 
         .notebook-name {
-            width: ~"calc(100% - 250px - 130px)";
             color: #f0f0f0;
+            overflow: hidden;
             font-size: 28px;
             &:hover {
                 color: #fff;
@@ -67,16 +63,12 @@ nav {
         }
 
         .search {
-
-            width: ~"calc(100% - 250px - 250px)";
-            max-width: 800px;
+            overflow: hidden;
             line-height: 20px;
             margin-top: 7px;
 
-            @media (min-width: 1260px) {
-                position: absolute;
-                left: 50%;
-                margin-left: -400px;
+            input {
+              width: 100%;
             }
         }
 

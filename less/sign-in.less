@@ -1,19 +1,28 @@
+.sd-sign-in {
+  float: right;
+  margin-right: 1.5rem;
+  margin-left: 1.5rem;
+  height: 70px;
+}
+
 .sd-sign-in > ul {
   list-style-type: none;
   display: inline-block;
-  float: right;
-  margin-right: 24px;
   position: relative;
   z-index: 800;
-  max-width: 230px;
+  padding: 0;
 }
 
 .sd-sign-in a {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   display: inline-block;
   cursor: default;
   font-size: 0.9rem;
   line-height: 0.9rem;
   font-size: 1rem;
+  max-width: 300px;
   text-decoration: none;
 }
 
@@ -21,9 +30,7 @@
     color: rgb(210,210,210);
     overflow: auto;
     display: block;
-    height: 70px;
     line-height: 70px;
-    width: 100%;
 }
 
 .sd-sign-in > ul > li a:hover {
@@ -50,6 +57,7 @@
   top: 100%;
   z-index: 800;
   float: left;
+  margin-right: 0.9rem;
 }
 
 .sd-sign-in > ul > li > ul > li {
@@ -90,16 +98,4 @@
 .sd-sign-in > ul > li > ul > li > a:hover {
   background-color: rgba(240,240,240,1);
   color: black;
-}
-
-.dashboard .sd-sign-in a {
-  border: 0;
-  cursor: default;
-  display: block;
-  font-size: 0.9rem;
-  line-height: 0.9rem;
-  margin: 0;
-  padding: 0.9rem 0.9rem;
-  text-decoration: none;
-  text-align: left;
 }
