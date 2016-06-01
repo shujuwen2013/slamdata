@@ -35,9 +35,9 @@ import OIDCCryptUtils.Types as OIDC
 
 type RedirectHashPayload =
   { idToken :: OIDC.IdToken
-  , authUser :: Maybe String
+  , authUser :: M.Maybe String
   , state :: OIDC.BoundStateJWS
-  , prompt :: Maybe String
+  , prompt :: M.Maybe String
   }
 
 parameterParser :: P.Parser (T.Tuple String String)
