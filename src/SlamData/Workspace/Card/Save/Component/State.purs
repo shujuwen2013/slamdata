@@ -22,7 +22,7 @@ import Data.Path.Pathy as Path
 
 type State =
   { pathString ∷ Maybe String
-  , confirmedPath :: Maybe (Path.AbsFile Path.Sandboxed)
+  , confirmedPath ∷ Maybe (Path.AbsFile Path.Sandboxed)
   }
 
 initialState ∷ State
