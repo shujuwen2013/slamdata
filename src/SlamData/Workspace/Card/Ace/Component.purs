@@ -40,9 +40,9 @@ import Halogen.HTML.Properties.Indexed as HP
 import Halogen.HTML.Properties.Indexed.ARIA as ARIA
 import Halogen.Themes.Bootstrap3 as B
 
+import SlamData.Workspace.Card.Model as Card
 import SlamData.Workspace.Card.Ace.Component.Query (QueryP)
 import SlamData.Workspace.Card.Ace.Component.State (State, StateP, initialState, _levelOfDetails)
-import SlamData.Workspace.Card.Ace.Model as Model
 import SlamData.Workspace.Card.CardType (CardType(Ace), AceMode, aceMode, aceCardGlyph)
 import SlamData.Workspace.Card.Common.EvalQuery (CardEvalQuery(..), CardEvalInput)
 import SlamData.Workspace.Card.Component (CardStateP, CardQueryP, makeCardComponent, makeQueryPrism, _AceState, _AceQuery)
@@ -87,16 +87,16 @@ aceComponent cfg = makeCardComponent
     content ← fromMaybe "" <$> H.query unit (H.request GetText)
     mbEditor ← H.query unit (H.request GetEditor)
     rrs ← H.fromEff $ maybe (pure []) getRangeRecs $ join mbEditor
-    pure $ k $ Model.encode { text: content, ranges: rrs }
-  eval (Load json next) = do
-    let model = either (const Model.emptyModel) id $ Model.decode json
-        text = model.text
-        ranges = model.ranges
-    H.query unit $ H.action (SetText text)
-    mbEditor ← H.query unit $ H.request GetEditor
-    H.fromEff $ for_ (join mbEditor) \editor → do
-      traverse_ (readOnly editor) ranges
-      Editor.navigateFileEnd editor
+    pure ∘ k $ Card.Ace cfg.mode { text: content, ranges: rrs }
+  eval (Load card next) = do
+    case card of
+      Card.Ace _ { text, ranges } → do
+        H.query unit $ H.action (SetText text)
+        mbEditor ← H.query unit $ H.request GetEditor
+        H.fromEff $ for_ (join mbEditor) \editor → do
+          traverse_ (readOnly editor) ranges
+          Editor.navigateFileEnd editor
+      _ → pure unit
     pure next
   eval (SetCanceler _ next) = pure next
   eval (SetDimensions dims next) = do

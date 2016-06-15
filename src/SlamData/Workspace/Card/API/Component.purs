@@ -29,7 +29,7 @@ import Halogen.HTML.Indexed as HH
 import SlamData.Effects (Slam)
 import SlamData.Workspace.Card.API.Component.Query (QueryP)
 import SlamData.Workspace.Card.API.Component.State (State, initialState)
-import SlamData.Workspace.Card.API.Model as Model
+import SlamData.Workspace.Card.Model as Card
 import SlamData.Workspace.Card.CardType as CT
 import SlamData.Workspace.Card.Component as NC
 import SlamData.Workspace.FormBuilder.Component as FB
@@ -70,11 +70,13 @@ eval q =
       H.query unit (H.request (FB.GetItems ⋙ left)) <#>
         maybe [] L.fromList
           ⋙ { items : _ }
-          ⋙ Model.encode
+          ⋙ Card.API
           ⋙ k
-    NC.Load json next → do
-      for_ (Model.decode json) \{items} →
-        H.query unit $ H.action (FB.SetItems (L.toList items) ⋙ left)
+    NC.Load card next → do
+      case card of
+        Card.API { items } →
+          void ∘ H.query unit $ H.action (FB.SetItems (L.toList items) ⋙ left)
+        _ → pure unit
       pure next
     NC.SetCanceler _ next → pure next
     NC.SetDimensions _ next → pure next

@@ -25,7 +25,6 @@ module SlamData.Workspace.Card.Component
 import SlamData.Prelude
 import SlamData.Config as Config
 
-import Data.Argonaut as JSON
 import Data.Time (Milliseconds(..))
 import Data.Lens (PrismP, (.~), review, preview, clonePrism)
 import Data.Visibility (Visibility(..))
@@ -39,6 +38,7 @@ import Math as Math
 
 import SlamData.Effects (Slam)
 import SlamData.Workspace.Card.CardType (cardClasses)
+import SlamData.Workspace.Card.Model as Card
 import SlamData.Workspace.Card.Component.Def (CardDef, makeQueryPrism, makeQueryPrism')
 import SlamData.Workspace.Card.Component.Query as CQ
 import SlamData.Workspace.Card.Component.Render as CR
@@ -124,10 +124,10 @@ makeCardComponentPart def render =
     pure next
   eval (CQ.GetOutput k) = k <$> H.gets (_.output)
   eval (CQ.SaveCard cardId cardType k) = do
-    json ← H.query unit (left (H.request CQ.Save))
-    pure $ k { cardId, cardType, inner: fromMaybe JSON.jsonNull json }
-  eval (CQ.LoadCard model next) = do
-    H.query unit (left (H.action (CQ.Load model.inner)))
+    model ← fromMaybe (Card.cardModelOfType cardType) <$> H.query unit (left (H.request CQ.Save))
+    pure $ k { cardId, model }
+  eval (CQ.LoadCard card next) = do
+    H.query unit ∘ left ∘ H.action $ CQ.Load card.model
     sendAfter' (Milliseconds 100.0) (CQ.UpdateDimensions unit)
     pure next
   eval (CQ.SetCardAccessType at next) =

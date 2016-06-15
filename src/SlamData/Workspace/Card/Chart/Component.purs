@@ -20,7 +20,7 @@ import SlamData.Prelude
 
 import Control.Monad.Eff.Exception (Error)
 
-import Data.Argonaut (JArray, jsonEmptyObject)
+import Data.Argonaut (JArray)
 import Data.Int (toNumber, floor)
 import Data.Lens ((.~), (?~))
 
@@ -40,6 +40,7 @@ import Halogen.Themes.Bootstrap3 as B
 import SlamData.Effects (Slam)
 import SlamData.Quasar.Query as Quasar
 import SlamData.Render.CSS as Rc
+import SlamData.Workspace.Card.Model as Card
 import SlamData.Workspace.Card.CardType as Ct
 import SlamData.Workspace.Card.Chart.ChartOptions as CO
 import SlamData.Workspace.Card.Chart.ChartType (ChartType(..))
@@ -137,7 +138,7 @@ eval (ECH.EvalCard value output next) = do
 -- No state needs loading/saving for the chart card, as it is fully populated
 -- by its input, and will be restored by the parent `Viz` card running when
 -- the deck is restored
-eval (ECH.Save k) = pure (k jsonEmptyObject)
+eval (ECH.Save k) = pure $ k Card.Chart
 eval (ECH.Load _ next) = pure next
 eval (ECH.SetCanceler _ next) = pure next
 eval (ECH.SetDimensions dims next) = do

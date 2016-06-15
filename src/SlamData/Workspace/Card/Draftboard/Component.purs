@@ -54,9 +54,10 @@ import SlamData.Render.CSS as RC
 import SlamData.Workspace.AccessType as AT
 import SlamData.Workspace.Card.Draftboard.Common (deleteGraph)
 import SlamData.Workspace.Card.Draftboard.Component.Query (Query(..), QueryP, QueryC)
-import SlamData.Workspace.Card.Draftboard.Component.State (State, DeckPosition, initialState, encode, decode, _moving, _accessType, _inserting)
+import SlamData.Workspace.Card.Draftboard.Component.State (State, DeckPosition, initialState, encode, decode, _moving, _accessType, _inserting, modelFromState)
 import SlamData.Workspace.Card.CardId as CID
 import SlamData.Workspace.Card.CardType as Ct
+import SlamData.Workspace.Card.Model as Card
 import SlamData.Workspace.Card.Common (CardOptions)
 import SlamData.Workspace.Card.Common.EvalQuery as Ceq
 import SlamData.Workspace.Card.Component as Cp
@@ -139,11 +140,13 @@ evalCard (Ceq.NotifyRunCard next) = pure next
 evalCard (Ceq.NotifyStopCard next) = pure next
 evalCard (Ceq.SetCanceler canceler next) = pure next
 evalCard (Ceq.SetDimensions _ next) = pure next
-evalCard (Ceq.Save k) = map (k ∘ encode) H.get
-evalCard (Ceq.Load json next) = do
-  for_ (decode json) \model → do
-    H.modify _ { decks = model.decks }
-    loadDecks
+evalCard (Ceq.Save k) = map (k ∘ Card.Draftboard ∘ modelFromState) H.get
+evalCard (Ceq.Load card next) = do
+  case card of
+    Card.Draftboard model → do
+      H.modify _ { decks = model.decks }
+      loadDecks
+    _ → pure unit
   pure next
 
 evalBoard ∷ CardOptions → Natural Query DraftboardDSL

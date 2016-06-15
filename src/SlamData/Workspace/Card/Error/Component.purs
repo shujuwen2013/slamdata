@@ -23,6 +23,7 @@ import Data.Lens ((^?))
 import Data.Lens as Lens
 
 import SlamData.Workspace.Card.Common.EvalQuery as CEQ
+import SlamData.Workspace.Card.Model as Card
 import SlamData.Workspace.Card.CardType as CT
 import SlamData.Workspace.Card.Component as CC
 import SlamData.Workspace.Card.Error.Component.State as ECS
@@ -77,8 +78,6 @@ cardEval q =
     CEQ.SetDimensions _ next →
       pure next
     CEQ.Save k →
-      k ∘ ECS.encode
-        <$> H.get
-    CEQ.Load json next →
-      for_ (ECS.decode json) H.set
-        $> next
+      pure $ k Card.ErrorCard
+    CEQ.Load _ next →
+      pure next

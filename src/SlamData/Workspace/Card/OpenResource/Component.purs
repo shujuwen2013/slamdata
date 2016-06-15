@@ -22,11 +22,10 @@ module SlamData.Workspace.Card.OpenResource.Component
 
 import SlamData.Prelude
 
-import Data.Argonaut as J
 import Data.Array as Arr
 import Data.Foldable as F
 import Data.Lens as Lens
-import Data.Lens ((?~), (.~), (^?))
+import Data.Lens ((?~), (.~))
 import Data.Path.Pathy (printPath, peel)
 
 import Halogen as H
@@ -45,18 +44,20 @@ import SlamData.Render.CSS as Rc
 import SlamData.Workspace.Card.CardType as CT
 import SlamData.Workspace.Card.Common.EvalQuery (liftWithCanceler')
 import SlamData.Workspace.Card.Common.EvalQuery as Eq
+import SlamData.Workspace.Card.Model as Card
 import SlamData.Workspace.Card.Component as NC
 import SlamData.Workspace.Card.OpenResource.Component.Query (QueryP, Query(..))
 import SlamData.Workspace.Card.OpenResource.Component.State (State, initialState, _selected, _browsing, _items, _loading, _levelOfDetails)
 import SlamData.Workspace.LevelOfDetails (LevelOfDetails(..))
+
 
 import Utils.Path as PU
 
 type HTML = H.ComponentHTML QueryP
 type DSL = H.ComponentDSL State QueryP Slam
 
-openResourceComponent ∷ J.Json → H.Component NC.CardStateP NC.CardQueryP Slam
-openResourceComponent inner =
+openResourceComponent ∷ Maybe R.Resource → H.Component NC.CardStateP NC.CardQueryP Slam
+openResourceComponent mres =
   NC.makeCardComponent
     { cardType: CT.OpenResource
     , component: H.lifecycleComponent
@@ -69,10 +70,6 @@ openResourceComponent inner =
     , _State: NC._OpenResourceState
     , _Query: NC.makeQueryPrism NC._OpenResourceQuery
     }
-
-  where
-    mres =
-      J.decodeJson inner ^? Lens._Right
 
 render ∷ State → HTML
 render state =
@@ -174,16 +171,16 @@ cardEval (Eq.EvalCard info output next) = pure next
 cardEval (Eq.NotifyRunCard next) = pure next
 cardEval (Eq.Save k) = do
   mbRes ← H.gets _.selected
-  k <$> case mbRes of
-    Just res → pure $ J.encodeJson $ R.File res
-    Nothing → do
-      br ← H.gets _.browsing
-      pure $ J.encodeJson $ R.Directory br
-cardEval (Eq.Load js next) = do
-  for_ (J.decodeJson js) \res →
-    case res of
-      R.File fp → resourceSelected res
-      _ → pure unit
+  k ∘ Card.OpenResource <$>
+    case mbRes of
+      Just res → pure ∘ Just $ R.File res
+      Nothing → do
+        br ← H.gets _.browsing
+        pure ∘ Just $ R.Directory br
+cardEval (Eq.Load card next) = do
+  case card of
+    Card.OpenResource (Just (res @ R.File _)) → resourceSelected res
+    _ → pure unit
   pure next
 cardEval (Eq.SetCanceler _ next) = pure next
 cardEval (Eq.SetDimensions dims next) = do

@@ -14,7 +14,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -}
 
-module SlamData.Workspace.Card.DownloadOptions.Component.State where
+module SlamData.Workspace.Card.DownloadOptions.Component.State
+  ( State
+  , initialState
+  , eqState
+  , _compress
+  , _options
+  , _source
+  , _levelOfDetails
+  , encode
+  , decode
+  ) where
 
 import SlamData.Prelude
 
@@ -33,6 +43,13 @@ type State =
   , source ∷ Maybe PU.FilePath
   , levelOfDetails ∷ LevelOfDetails
   }
+
+eqState ∷ State → State → Boolean
+eqState s1 s2 =
+  s1.compress ≡ s2.compress
+    && s1.options ≡ s2.options
+    && s1.source ≡ s2.source
+    && s1.levelOfDetails ≡ s2.levelOfDetails
 
 initialState ∷ State
 initialState =

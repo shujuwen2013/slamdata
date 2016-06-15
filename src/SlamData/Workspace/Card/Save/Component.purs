@@ -23,7 +23,6 @@ module SlamData.Workspace.Card.Save.Component
 
 import SlamData.Prelude
 
-import Data.Argonaut (decodeJson, encodeJson)
 import Data.Lens ((.~))
 import Data.Path.Pathy as Pt
 
@@ -36,10 +35,10 @@ import Halogen.HTML.Events.Indexed as HE
 
 import SlamData.Effects (Slam)
 import SlamData.Render.CSS as Rc
+import SlamData.Workspace.Card.Model as Card
 import SlamData.Workspace.Card.CardType as Ct
 import SlamData.Workspace.Card.Common.EvalQuery as Eq
 import SlamData.Workspace.Card.Component as Cc
---import SlamData.Workspace.Card.Eval as Eval
 import SlamData.Workspace.Card.Save.Component.Query (Query(..), QueryP)
 import SlamData.Workspace.Card.Save.Component.State (State, initialState, _pathString)
 
@@ -94,11 +93,11 @@ cardEval (Eq.NotifyRunCard next) = pure next
 cardEval (Eq.NotifyStopCard next) = pure next
 cardEval (Eq.Save k) = do
   pt ← H.gets _.pathString
-  case Pt.parseAbsFile pt of
-    Nothing → pure $ k $ encodeJson ""
-    Just _ → pure $ k $ encodeJson pt
-cardEval (Eq.Load js next) = do
-  for_ (decodeJson js) \s → H.modify (_pathString .~ s)
+  pure ∘ k ∘ Card.Save $ Pt.parseAbsFile pt $> pt
+cardEval (Eq.Load card next) = do
+  case card of
+    Card.Save s → H.modify $ _pathString .~ fromMaybe "" s
+    _ → pure unit
   pure next
 -- TODO: move something equivalent to this into EvalCard -gb
 -- cardEval (Eq.SetupCard p next) = do

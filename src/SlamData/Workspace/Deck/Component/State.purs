@@ -71,8 +71,6 @@ import Data.Path.Pathy as P
 import Data.StrMap as SM
 import Data.Set as Set
 
-import Data.Argonaut as J
-
 import Halogen.Component.Opaque.Unsafe (OpaqueState)
 import Halogen.Component.Utils.Debounced (DebounceTrigger)
 
@@ -254,23 +252,16 @@ _cardElementWidth = lens _.cardElementWidth _{cardElementWidth = _}
 _level ∷ ∀ a r. LensP {level ∷ a|r} a
 _level = lens _.level _{level = _}
 
-addCard ∷ CT.CardType → J.Json → State → State
-addCard cardType inner st = fst $ addCard' cardType inner st
+addCard ∷ Card.AnyCardModel → State → State
+addCard card st = fst $ addCard' card st
 
-addCard' ∷ CT.CardType → J.Json → State → State × CardId
-addCard' cardType inner st =
+addCard' ∷ Card.AnyCardModel → State → State × CardId
+addCard' card st =
   let
     cardId = CardId st.fresh
     newState = st
       { fresh = st.fresh + one
-      , modelCards =
-          let def = { cardId, cardType, inner }
-          in case A.uncons $ A.reverse st.modelCards of
-            Nothing → st.modelCards `A.snoc` def
-            Just {head, tail} →
-              if head.cardId ≡ NextActionCardId
-                then A.reverse $ def A.: tail
-                else st.modelCards `A.snoc` def
+      , modelCards = A.snoc st.modelCards { cardId, model: card}
       }
   in newState × cardId
 
@@ -306,15 +297,15 @@ findLastRealCard state =
 
 -- | Finds the type of the last card.
 findLastCardType ∷ State → Maybe CT.CardType
-findLastCardType { displayCards } = _.cardType <$> A.last displayCards
+findLastCardType { displayCards } = Card.modelCardType ∘ _.model <$> A.last displayCards
 
 -- TODO: should this be displayCards? - js
 cardsOfType ∷ CT.CardType → State → Array CardId
 cardsOfType cardType =
   _.modelCards ⋙ A.mapMaybe cardTypeMatches ⋙ foldMap pure
   where
-  cardTypeMatches { cardId: cid, cardType: ty } =
-    if ty ≡ cardType
+  cardTypeMatches { cardId: cid, model } =
+    if Card.modelCardType model ≡ cardType
        then Just cid
        else Nothing
 
@@ -384,5 +375,5 @@ activeCardId st = cardIdFromIndex (fromMaybe 0 st.activeCardIndex) st
 
 activeCardType ∷ State → Maybe CT.CardType
 activeCardType st =
-  _.cardType <$>
+  Card.modelCardType ∘ _.model <$>
     cardFromIndex (fromMaybe 0 st.activeCardIndex) st

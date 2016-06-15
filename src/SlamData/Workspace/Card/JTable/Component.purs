@@ -34,13 +34,13 @@ import Halogen as H
 
 import SlamData.Effects (Slam)
 import SlamData.Quasar.Query as Quasar
+import SlamData.Workspace.Card.Model as Card
 import SlamData.Workspace.Card.CardType as Ct
 import SlamData.Workspace.Card.Common.EvalQuery as CEQ
 import SlamData.Workspace.Card.Component (CardQueryP, CardStateP, makeCardComponent, makeQueryPrism, _JTableState, _JTableQuery)
 import SlamData.Workspace.Card.JTable.Component.Query (QueryP, PageStep(..), Query(..))
 import SlamData.Workspace.Card.JTable.Component.Render (render)
 import SlamData.Workspace.Card.JTable.Component.State as JTS
-import SlamData.Workspace.Card.JTable.Model as Model
 import SlamData.Workspace.Card.Port as Port
 import SlamData.Workspace.LevelOfDetails (LevelOfDetails(..))
 
@@ -71,9 +71,11 @@ evalCard =
       for_ info.input \port →
         CEQ.runCardEvalT $ runTable port $> port
       pure next
-    CEQ.Save k → pure ∘ k =<< H.gets (Model.encode ∘ JTS.toModel)
-    CEQ.Load json next → do
-      either (const (pure unit)) H.set $ JTS.fromModel <$> Model.decode json
+    CEQ.Save k → pure ∘ k =<< H.gets (Card.JTable ∘ JTS.toModel)
+    CEQ.Load card next → do
+      case card of
+        Card.JTable model → H.set $ JTS.fromModel model
+        _ → pure unit
       pure next
     CEQ.SetCanceler _ next → pure next
     CEQ.SetDimensions dims next → do

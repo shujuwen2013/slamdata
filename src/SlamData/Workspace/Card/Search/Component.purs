@@ -22,7 +22,6 @@ module SlamData.Workspace.Card.Search.Component
 
 import SlamData.Prelude
 
-import Data.Argonaut (encodeJson, decodeJson)
 import Data.Lens ((.~))
 
 import Halogen as H
@@ -34,9 +33,9 @@ import Halogen.Themes.Bootstrap3 as B
 import SlamData.Effects (Slam)
 import SlamData.Render.Common as RC
 import SlamData.Render.CSS as CSS
+import SlamData.Workspace.Card.Model as Card
 import SlamData.Workspace.Card.CardType as CT
 import SlamData.Workspace.Card.Component as NC
---import SlamData.Workspace.Card.Eval as Eval
 import SlamData.Workspace.Card.Search.Component.Query (Query, SearchQuery(..))
 import SlamData.Workspace.Card.Search.Component.State (State, _running, _searchString, initialState)
 
@@ -87,10 +86,11 @@ cardEval q =
       pure next
     NC.Save k → do
       input ← H.gets _.searchString
-      pure $ k $ encodeJson input
-    NC.Load json next → do
-      for_ (decodeJson json) \input →
-        H.modify $ _searchString .~ input
+      pure ∘ k $ Card.Search input
+    NC.Load card next → do
+      case card of
+        Card.Search input → H.modify $ _searchString .~ input
+        _ → pure unit
       pure next
     NC.SetCanceler _ next → pure next
     NC.SetDimensions _ next → pure next

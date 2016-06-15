@@ -19,6 +19,8 @@ module SlamData.Workspace.Card.Chart.ChartOptions
   , encode
   , decode
   , buildOptions
+  , eqBuildOptions
+  , genBuildOptions
   ) where
 
 import SlamData.Prelude
@@ -35,11 +37,27 @@ import SlamData.Workspace.Card.Chart.ChartOptions.Line (buildLine)
 import SlamData.Workspace.Card.Chart.ChartOptions.Pie (buildPie)
 import SlamData.Workspace.Card.Chart.ChartType (ChartType(..))
 
+import Test.StrongCheck as SC
+import Test.StrongCheck.Gen as Gen
+
 type BuildOptions =
   { chartType ∷ ChartType
   , axisLabelAngle ∷ Int
   , axisLabelFontSize ∷ Int
   }
+
+eqBuildOptions ∷ BuildOptions → BuildOptions → Boolean
+eqBuildOptions o1 o2 =
+  o1.chartType ≡ o2.chartType
+    && o1.axisLabelAngle ≡ o2.axisLabelAngle
+    && o1.axisLabelFontSize ≡ o2.axisLabelFontSize
+
+genBuildOptions ∷ Gen.Gen BuildOptions
+genBuildOptions = do
+  chartType ← SC.arbitrary
+  axisLabelAngle ← SC.arbitrary
+  axisLabelFontSize ← SC.arbitrary
+  pure { chartType, axisLabelAngle, axisLabelFontSize }
 
 encode ∷ BuildOptions → Json
 encode m

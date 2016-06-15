@@ -20,35 +20,13 @@ import Prelude
 
 import Data.Argonaut (encodeJson, decodeJson)
 import Data.Either (Either(..))
-import Data.List (toList)
 
-import SlamData.FileSystem.Resource (Resource(..), Mount(..))
+import SlamData.FileSystem.Resource (Resource)
 
-import Test.StrongCheck (QC, Result(..), class Arbitrary, arbitrary, quickCheck, (<?>))
-import Test.StrongCheck.Gen (elements)
-import Test.Property.Utils.Path (runArbFilePath, runArbDirPath)
-
-newtype ArbResource = ArbResource Resource
-
-runArbResource :: ArbResource -> Resource
-runArbResource (ArbResource r) = r
-
-instance arbitraryArbResource :: Arbitrary ArbResource where
-  arbitrary = do
-    fp <- runArbFilePath <$> arbitrary
-    dp <- runArbDirPath <$> arbitrary
-    ArbResource <$>
-      elements
-        (File fp)
-        (toList
-          [ Mount (View fp)
-          , Workspace dp
-          , Directory dp
-          , Mount (Database dp)
-          ])
+import Test.StrongCheck (QC, Result(..), quickCheck, (<?>))
 
 check :: QC Unit
-check = quickCheck $ runArbResource >>> \res ->
+check = quickCheck \(res ∷ Resource) ->
   case decodeJson (encodeJson res) of
     Left err -> Failed $ "Decode failed: " ++ err
     Right res' -> res == res' <?> "Decoded resource does not match encoded resource"

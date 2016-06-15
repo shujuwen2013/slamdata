@@ -14,7 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -}
 
-module SlamData.Workspace.Card.Viz.Model where
+module SlamData.Workspace.Card.Viz.Model
+  ( Model
+  , eqModel
+  , encode
+  , decode
+  , initialModel
+  , genModel
+  ) where
 
 import SlamData.Prelude
 
@@ -23,11 +30,23 @@ import Data.Argonaut (Json, (.?), decodeJson, jsonEmptyObject, (~>), (:=))
 import SlamData.Workspace.Card.Chart.ChartConfiguration as CC
 import SlamData.Workspace.Card.Chart.ChartOptions as CO
 import SlamData.Workspace.Card.Chart.ChartType (ChartType(..))
+import Test.StrongCheck.Gen as Gen
 
 type Model =
   { chartConfig ∷ CC.ChartConfiguration
   , options ∷ CO.BuildOptions
   }
+
+eqModel ∷ Model → Model → Boolean
+eqModel m1 m2 =
+  CC.eqChartConfiguration m1.chartConfig m2.chartConfig
+    && CO.eqBuildOptions m1.options m2.options
+
+genModel ∷ Gen.Gen Model
+genModel = do
+  chartConfig ← CC.genChartConfiguration
+  options ← CO.genBuildOptions
+  pure { chartConfig, options }
 
 encode ∷ Model → Json
 encode m

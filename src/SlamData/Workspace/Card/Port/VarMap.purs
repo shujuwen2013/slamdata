@@ -171,7 +171,7 @@ instance valueVarMapValue ∷ SDV.Value VarMapValue where
 
 instance arbitraryVarMapValue ∷ SC.Arbitrary VarMapValue where
   arbitrary = do
-    Literal <$> EJSON.arbitraryEJsonOfSize 1
+    Literal <$> EJSON.arbitraryJsonEncodableEJsonOfSize 1
       <|> QueryExpr <$> SC.arbitrary
 
 parseVarMapValue

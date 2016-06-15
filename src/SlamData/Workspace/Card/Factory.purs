@@ -15,17 +15,17 @@ limitations under the License.
 -}
 
 -- haha only serious
-module SlamData.Workspace.Card.Factory where
+module SlamData.Workspace.Card.Factory
+  ( cardComponent
+  ) where
 
 import SlamData.Prelude
 
-import Data.Argonaut as J
-
+import SlamData.Workspace.Card.Model as Card
 import SlamData.Workspace.Card.Ace.Component (AceEval, aceComponent)
 import SlamData.Workspace.Card.API.Component (apiComponent)
 import SlamData.Workspace.Card.APIResults.Component (apiResultsComponent)
-import SlamData.Workspace.Card.CardId (CardId)
-import SlamData.Workspace.Card.CardType (CardType(..), AceMode(..))
+import SlamData.Workspace.Card.CardType as CT
 import SlamData.Workspace.Card.Chart.Component (chartComponent)
 import SlamData.Workspace.Card.Common (CardOptions)
 import SlamData.Workspace.Card.Component (CardComponent)
@@ -42,29 +42,29 @@ import SlamData.Workspace.Card.Save.Component (saveCardComponent)
 import SlamData.Workspace.Card.Search.Component (searchComponent)
 import SlamData.Workspace.Card.Viz.Component (vizComponent)
 
-cardTypeComponent ∷ CardType → CardId → J.Json → CardOptions → CardComponent
-cardTypeComponent ty cid inner opts =
-  case ty of
-    Ace mode →
+cardComponent ∷ Card.Model → CardOptions → CardComponent
+cardComponent card opts =
+  case card.model of
+    Card.Ace mode _ →
       aceComponent
         { mode
         , eval: aceEval mode
         }
-    Search → searchComponent
-    Viz → vizComponent
-    Chart → chartComponent
-    Markdown → markdownComponent cid
-    JTable → jtableComponent
-    Download → downloadComponent
-    API → apiComponent
-    APIResults → apiResultsComponent
-    NextAction → nextCardComponent
-    Save → saveCardComponent
-    OpenResource → openResourceComponent inner
-    DownloadOptions → DOpts.comp
-    ErrorCard → Error.comp
-    Draftboard -> draftboardComponent opts
+    Card.Search _ → searchComponent
+    Card.Viz _ → vizComponent
+    Card.Chart → chartComponent
+    Card.Markdown _ → markdownComponent card.cardId
+    Card.JTable _ → jtableComponent
+    Card.Download → downloadComponent
+    Card.API _ → apiComponent
+    Card.APIResults → apiResultsComponent
+    Card.NextAction → nextCardComponent
+    Card.Save _ → saveCardComponent
+    Card.OpenResource mres → openResourceComponent mres
+    Card.DownloadOptions _ → DOpts.comp
+    Card.ErrorCard → Error.comp
+    Card.Draftboard _ → draftboardComponent opts
 
-aceEval ∷ AceMode → AceEval
-aceEval MarkdownMode = \_ → pure unit
-aceEval SQLMode = queryEval
+aceEval ∷ CT.AceMode → AceEval
+aceEval CT.MarkdownMode = \_ → pure unit
+aceEval CT.SQLMode = queryEval

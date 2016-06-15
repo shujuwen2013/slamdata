@@ -32,6 +32,7 @@ import Control.Monad.Eff.Ref as Ref
 import Control.Monad.Except.Trans (ExceptT(..), runExceptT, withExceptT)
 
 import Data.Array as Array
+import Data.List as L
 import Data.Map as Map
 import Data.Path.Pathy ((</>))
 import Data.Path.Pathy as Pathy
@@ -39,9 +40,7 @@ import Data.Set as Set
 
 import SlamData.Quasar.Aff (QEff)
 import SlamData.Quasar.Data as Quasar
-import SlamData.Workspace.Card.CardType as CT
 import SlamData.Workspace.Card.Model as CM
-import SlamData.Workspace.Card.Draftboard.Component.State (decode)
 import SlamData.Workspace.Deck.Model as DM
 import SlamData.Workspace.Deck.DeckId (DeckId, deckIdToString)
 
@@ -78,7 +77,7 @@ transitiveGraphProducer path deckId = produce \emit → do
 
   loadChildIds parentId = runExceptT do
     json ← ExceptT $ Quasar.load (DM.deckIndex path parentId)
-    ExceptT $ pure (childDeckIds ∘ _.cards =<< DM.decode json)
+    ExceptT $ pure $ childDeckIds ∘ _.cards <$> DM.decode json
 
 transitiveChildren
   ∷ ∀ eff m
@@ -103,17 +102,13 @@ transitiveChildren path deckId = fromAff go
         lift $ fromEff (Ref.modifyRef ref (map (_ <> cids')))
         collectIds ref
 
-childDeckIds ∷ Array (CM.Model) → Either String (Array DeckId)
-childDeckIds = map childIds ∘ decodeStates ∘ filterBoards
+childDeckIds ∷ Array (CM.Model) → Array DeckId
+childDeckIds = (_ >>= getDeckIds ∘ _.model)
   where
-  filterBoards =
-    Array.filter \c → c.cardType == CT.Draftboard
-
-  decodeStates =
-    sequence ∘ map (decode ∘ _.inner)
-
-  childIds =
-    join ∘ map (foldl Array.snoc [] ∘ Map.keys ∘ _.decks)
+  getDeckIds =
+    case _ of
+      CM.Draftboard {decks} → L.fromList $ Map.keys decks
+      _ → []
 
 deleteGraph
   ∷ ∀ eff m

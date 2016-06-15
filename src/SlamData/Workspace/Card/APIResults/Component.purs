@@ -18,7 +18,6 @@ module SlamData.Workspace.Card.APIResults.Component where
 
 import SlamData.Prelude
 
-import Data.Argonaut as J
 import Data.Lens as Lens
 import Data.StrMap as SM
 
@@ -31,6 +30,7 @@ import SlamData.Effects (Slam)
 import SlamData.Workspace.Card.APIResults.Component.Query (QueryP)
 import SlamData.Workspace.Card.APIResults.Component.State (State, initialState)
 import SlamData.Workspace.Card.Component as NC
+import SlamData.Workspace.Card.Model as Card
 import SlamData.Workspace.Card.Port as Port
 import SlamData.Workspace.Card.CardType as Ct
 
@@ -86,7 +86,7 @@ evalCard q =
       pure next
     NC.NotifyRunCard next -> pure next
     NC.NotifyStopCard next -> pure next
-    NC.Save k -> pure $ k J.jsonEmptyObject
-    NC.Load json next -> pure next
+    NC.Save k -> pure $ k Card.APIResults
+    NC.Load _ next -> pure next
     NC.SetCanceler _ next -> pure next
     NC.SetDimensions _ next -> pure next

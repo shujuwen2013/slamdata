@@ -19,7 +19,6 @@ module SlamData.Workspace.Card.Download.Component where
 
 import SlamData.Prelude
 
-import Data.Argonaut (jsonEmptyObject)
 import Data.Lens ((^?), (.~))
 import Data.Lens as Lens
 import Data.Path.Pathy (printPath)
@@ -34,6 +33,7 @@ import Quasar.Paths as Paths
 
 import SlamData.Download.Model as D
 import SlamData.Effects (Slam)
+import SlamData.Workspace.Card.Model as Card
 import SlamData.Workspace.Card.CardType (CardType(Download))
 import SlamData.Workspace.Card.Common.EvalQuery as Ec
 import SlamData.Workspace.Card.Component (makeCardComponent, makeQueryPrism, _DownloadState, _DownloadQuery)
@@ -92,7 +92,7 @@ cardEval (Ec.EvalCard info output next ) = do
   pure next
 cardEval (Ec.NotifyRunCard next) = pure next
 cardEval (Ec.NotifyStopCard next) = pure next
-cardEval (Ec.Save k) = pure $ k jsonEmptyObject
+cardEval (Ec.Save k) = pure ∘ k $ Card.Save Nothing -- TODO: do we really need to fill this in? Looks like we didn't do anything before. -js
 cardEval (Ec.Load json next) = pure next
 cardEval (Ec.SetCanceler _ next) = pure next
 cardEval (Ec.SetDimensions dims next) = do

@@ -23,7 +23,6 @@ module SlamData.Workspace.Card.Next.Component
 import SlamData.Prelude
 
 import Data.Array as Arr
-import Data.Argonaut (jsonEmptyObject)
 import Data.Lens ((.~), (?~))
 
 import Halogen as H
@@ -35,6 +34,7 @@ import Halogen.Themes.Bootstrap3 as B
 
 import SlamData.Effects (Slam)
 import SlamData.Workspace.Card.Port as P
+import SlamData.Workspace.Card.Model as Card
 import SlamData.Workspace.Card.CardType as Ct
 import SlamData.Workspace.Card.Common.EvalQuery as Ec
 import SlamData.Workspace.Card.Component (makeCardComponent, makeQueryPrism, _NextState, _NextQuery)
@@ -120,7 +120,7 @@ cardEval (Ec.EvalCard value output next) = do
   -- map k ∘ Ec.runCardEvalT $ pure P.Blocked
 cardEval (Ec.NotifyRunCard next) = pure next
 cardEval (Ec.NotifyStopCard next) = pure next
-cardEval (Ec.Save k) = pure $ k jsonEmptyObject
+cardEval (Ec.Save k) = pure $ k Card.NextAction
 cardEval (Ec.Load _ next) = pure next
 cardEval (Ec.SetCanceler _ next) = pure next
 cardEval (Ec.SetDimensions _ next) = pure next
@@ -160,7 +160,7 @@ updatePort = case _ of
            , Ct.Save
            ])
       ∘ (_message .~ Nothing)
-  P.Draftboard → 
+  P.Draftboard →
     H.modify
       $ (_types .~ [ ])
       ∘ (_message .~ Nothing)

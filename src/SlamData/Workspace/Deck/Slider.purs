@@ -48,7 +48,7 @@ import SlamData.Workspace.Card.CardId (CardId)
 import SlamData.Workspace.Card.CardId as CardId
 import SlamData.Workspace.Card.Model as Card
 import SlamData.Workspace.Card.Component as CardC
-import SlamData.Workspace.Card.Factory (cardTypeComponent)
+import SlamData.Workspace.Card.Factory as Factory
 import SlamData.Workspace.Deck.Common (DeckHTML, DeckDSL)
 import SlamData.Workspace.Deck.Component.ChildSlot as ChildSlot
 import SlamData.Workspace.Deck.Component.Cycle (DeckComponent)
@@ -238,7 +238,7 @@ renderCard comp st card index =
     }
 
   cardComponent =
-    { component: cardTypeComponent card.cardType card.cardId card.inner cardOpts
+    { component: Factory.cardComponent card cardOpts
     , initialState:
         H.parentState
           CardC.initialCardState { accessType = st.accessType }

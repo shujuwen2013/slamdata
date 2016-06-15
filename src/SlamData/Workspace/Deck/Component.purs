@@ -42,8 +42,6 @@ import Data.Path.Pathy as Pathy
 import Data.Time (Milliseconds(..))
 import Data.StrMap as SM
 
-import Data.Argonaut as J
-
 import Ace.Halogen.Component as Ace
 
 import DOM.HTML.Location as Location
@@ -246,8 +244,8 @@ eval (SetModel deckId model level next) = do
   pure next
 eval (ExploreFile res next) = do
   H.modify
-    $ (DCS.addCard CT.JTable J.jsonEmptyObject)
-    ∘ (DCS.addCard CT.OpenResource $ J.encodeJson $ R.File res)
+    $ (DCS.addCard $ Card.cardModelOfType CT.JTable)
+    ∘ (DCS.addCard ∘ Card.OpenResource ∘ Just $ R.File res)
     ∘ (DCS._stateMode .~ Preparing)
   H.gets (map _.cardId ∘ Array.head ∘ _.modelCards) >>= traverse \cid → do
     H.modify $ DCS.addPendingCard cid
@@ -374,7 +372,7 @@ peekBackSide (Back.DoAction action _) =
       for_ (DCS.activeCardId state <|> lastId) \trashId → do
         let rem = DCS.removeCard trashId state
         for_ state.path \path →
-          for_ (DBC.childDeckIds (fst rem)) $
+          DBC.childDeckIds (fst rem) #
             H.fromAff ∘ runPar ∘ traverse_ (Par ∘ DBC.deleteGraph path)
         H.set $ snd rem
         triggerSave
@@ -489,7 +487,7 @@ updateIndicator = do
   H.query' cpIndicator unit
     $ H.action
     $ Indicator.UpdatePortList
-    $ map _.cardType cards
+    $ map (Card.modelCardType ∘ _.model) cards
   vid ← H.gets $ fromMaybe 0 ∘ _.activeCardIndex
   void $ H.query' cpIndicator unit $ H.action $ Indicator.UpdateActiveId vid
 
@@ -507,9 +505,9 @@ createCard cardType = do
   cid ← H.gets DCS.findLastRealCard
   case cid of
     Nothing →
-      H.modify $ DCS.addCard cardType (Card.innerModelOfType cardType)
+      H.modify ∘ DCS.addCard $ Card.cardModelOfType cardType
     Just cardId → do
-      (st × newCardId) ← H.gets $ DCS.addCard' cardType (Card.innerModelOfType cardType)
+      (st × newCardId) ← H.gets ∘ DCS.addCard' $ Card.cardModelOfType cardType
       setDeckState st
       runCard newCardId
   updateIndicatorAndNextAction
@@ -553,16 +551,14 @@ aceQueryShouldSave = H.runChildF >>> case _ of
 
 nextActionCard ∷ Card.Model
 nextActionCard =
-  { cardId : NextActionCardId
-  , cardType : CT.NextAction
-  , inner : J.jsonEmptyObject
+  { cardId: NextActionCardId
+  , model: Card.NextAction
   }
 
 errorCard ∷ Card.Model
 errorCard =
-  { cardId : ErrorCardId
-  , cardType : CT.ErrorCard
-  , inner : J.jsonEmptyObject
+  { cardId: ErrorCardId
+  , model: Card.ErrorCard
   }
 
 type RunCardsConfig =
@@ -635,7 +631,7 @@ currentStateOfCard
   ∷ Card.Model
   → DeckDSL Card.Model
 currentStateOfCard card =
-  H.query' cpCard (CardSlot card.cardId) (left $ H.request (SaveCard card.cardId card.cardType))
+  H.query' cpCard (CardSlot card.cardId) (left $ H.request (SaveCard card.cardId $ Card.modelCardType card.model))
     <#> fromMaybe card
 
 runStep
@@ -645,7 +641,10 @@ runStep
   → DeckDSL Port
 runStep cfg inputPort card @ { cardId } = do
   let input = { path: cfg.path, input: inputPort, cardId, globalVarMap: cfg.globalVarMap, accessType: cfg.accessType }
-  Eval.runEvalCard input ∘ Card.modelToEval =<< currentStateOfCard card
+  card' ← currentStateOfCard card
+  case Card.modelToEval card'.model of
+    Left err → pure $ Port.CardError "Could not evaluate card" -- TODO: more debuggable error message here -js
+    Right cmd → Eval.runEvalCard input cmd
 
 type CardUpdate = { card ∷ Card.Model, input ∷ Maybe Port, output ∷ Maybe Port}
 
@@ -724,7 +723,7 @@ saveDeck = do
     cards ← for st.modelCards \card → do
       currentState ← H.query' cpCard (CardSlot card.cardId)
         $ left
-        $ H.request (SaveCard card.cardId card.cardType)
+        $ H.request (SaveCard card.cardId $ Card.modelCardType card.model)
       pure $ fromMaybe card currentState
 
     H.modify $ DCS._modelCards .~ cards

@@ -47,6 +47,7 @@ import SlamData.Quasar.Query as Quasar
 import SlamData.Render.Common (row, glyph)
 import SlamData.Render.CSS as Rc
 import SlamData.Workspace.Card.CardType (CardType(Viz))
+import SlamData.Workspace.Card.Model as Card
 import SlamData.Workspace.Card.Chart.Aggregation (aggregationSelect)
 import SlamData.Workspace.Card.Chart.Axis (analyzeJArray, Axis)
 import SlamData.Workspace.Card.Chart.Axis as Ax
@@ -59,7 +60,6 @@ import SlamData.Workspace.Card.Viz.Component.Query (QueryC, Query(..))
 import SlamData.Workspace.Card.Viz.Component.State as VCS
 import SlamData.Workspace.Card.Viz.Form.Component (formComponent)
 import SlamData.Workspace.Card.Viz.Form.Component as Form
-import SlamData.Workspace.Card.Viz.Model as Model
 import SlamData.Workspace.LevelOfDetails (LevelOfDetails(..))
 
 type VizHTML = H.ParentHTML Form.StateP QueryC Form.QueryP Slam ChartType
@@ -310,7 +310,7 @@ cardEval (NotifyStopCard next) = pure next
 cardEval (Save k) = do
   st ← H.get
   config ← H.query st.chartType $ left $ H.request Form.GetConfiguration
-  pure $ k $ Model.encode
+  pure ∘ k $ Card.Viz
     { chartConfig: fromMaybe Form.initialState config
     , options:
         { chartType: st.chartType
@@ -318,13 +318,17 @@ cardEval (Save k) = do
         , axisLabelAngle: st.axisLabelAngle
         }
     }
-cardEval (Load json next) =
-  next <$ for_ (Model.decode json) \model → do
-    let st = VCS.fromModel model
-    H.set st
-    H.query st.chartType
-      $ left
-      $ H.action $ Form.SetConfiguration model.chartConfig
+cardEval (Load card next) = do
+  case card of
+    Card.Viz model → do
+      let st = VCS.fromModel model
+      H.set st
+      H.query st.chartType
+        $ left
+        $ H.action $ Form.SetConfiguration model.chartConfig
+      pure unit
+    _ → pure unit
+  pure next
 cardEval (SetCanceler _ next) = pure next
 cardEval (SetDimensions dims next) = do
   H.modify

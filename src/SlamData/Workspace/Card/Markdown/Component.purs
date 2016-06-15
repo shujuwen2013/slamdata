@@ -35,13 +35,13 @@ import Halogen.HTML.Indexed as HH
 import Halogen.HTML.Properties.Indexed as HP
 
 import SlamData.Effects (Slam)
+import SlamData.Workspace.Card.Model as Card
 import SlamData.Workspace.Card.CardId as CID
 import SlamData.Workspace.Card.CardType as Ct
 import SlamData.Workspace.Card.Common.EvalQuery (CardEvalQuery(..))
 import SlamData.Workspace.Card.Component (CardQueryP, CardStateP, makeCardComponent, makeQueryPrism', _MarkdownState, _MarkdownQuery)
 import SlamData.Workspace.Card.Markdown.Component.Query (Query(..), QueryP)
 import SlamData.Workspace.Card.Markdown.Component.State (State, StateP, initialState, formStateToVarMap)
-import SlamData.Workspace.Card.Markdown.Model (decode, encode)
 import SlamData.Workspace.Card.Port as Port
 import SlamData.Render.CSS as CSS
 
@@ -126,10 +126,10 @@ evalCEQ (EvalCard info output next) = do
 evalCEQ (Save k) = do
   input ← fromMaybe mempty <$> H.gets _.input
   state ← fromMaybe SM.empty <$> H.query unit (H.request SD.GetFormState)
-  pure $ k (encode { input, state })
-evalCEQ (Load json next) = do
-  case decode json of
-    Right { input, state } →
+  pure ∘ k $ Card.Markdown { input, state }
+evalCEQ (Load card next) = do
+  case card of
+    Card.Markdown { input, state } →
       void $ do
         H.modify (_ { input = Just input })
         H.query unit $ H.action (SD.SetDocument input)

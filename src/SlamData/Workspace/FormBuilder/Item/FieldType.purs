@@ -27,8 +27,12 @@ import Data.Argonaut as J
 import Data.Argonaut.Decode as JD
 import Data.Argonaut.Encode as JE
 import Data.Lens as Lens
+import Data.List as L
 
 import Halogen.HTML.Properties.Indexed as HP
+
+import Test.StrongCheck as SC
+import Test.StrongCheck.Gen as Gen
 
 data FieldType
   = StringFieldType
@@ -46,6 +50,13 @@ data FieldType
 
 derive instance genericFieldType ∷ Generic FieldType
 instance eqFieldType ∷ Eq FieldType where eq = gEq
+
+instance arbitraryFieldType ∷ SC.Arbitrary FieldType where
+  arbitrary =
+    Gen.elements
+      StringFieldType
+      (L.toList allFieldTypes)
+
 
 allFieldTypes ∷ Array FieldType
 allFieldTypes =
@@ -147,4 +158,3 @@ instance decodeJsonFieldType ∷ JD.DecodeJson FieldType where
       proj "query" = Right SqlExprFieldType
       proj "sql-identifier" = Right SqlIdentifierFieldType
       proj _ = Left "invalid FieldType"
-

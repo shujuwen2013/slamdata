@@ -37,7 +37,7 @@ import SlamData.Workspace.Card.Eval.CardEvalT as CET
 import SlamData.Workspace.Card.Port as Port
 import SlamData.Workspace.Card.Markdown.Eval as MDE
 import SlamData.Workspace.Card.Markdown.Model as MD
-import SlamData.Workspace.Card.Markdown.Component.State as MDS
+import SlamData.Workspace.Card.Markdown.Component.State.Core as MDS
 import SlamData.Workspace.Card.Search.Interpret as Search
 import SlamData.Workspace.Card.API.Model as API
 import SlamData.Workspace.Card.Viz.Model as Viz

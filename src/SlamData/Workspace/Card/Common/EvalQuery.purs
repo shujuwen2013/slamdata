@@ -27,14 +27,13 @@ import SlamData.Prelude
 
 import Control.Monad.Aff (Canceler)
 
-import Data.Argonaut (Json)
-
 import Halogen (ParentDSL, ComponentDSL)
 import Halogen.Component.Utils as Hu
 
 import SlamData.Effects (Slam, SlamDataEffects)
 import SlamData.Workspace.Card.Eval.CardEvalT (CardEvalInput, CardEvalT, runCardEvalT, temporaryOutputResource)
 import SlamData.Workspace.Card.Port as Port
+import SlamData.Workspace.Card.Model (AnyCardModel)
 
 -- | The query algebra shared by the inner parts of a card component.
 -- |
@@ -50,8 +49,8 @@ data CardEvalQuery a
   | NotifyRunCard a
   | NotifyStopCard a
   | SetCanceler (Canceler SlamDataEffects) a
-  | Save (Json → a)
-  | Load Json a
+  | Save (AnyCardModel → a)
+  | Load AnyCardModel a
   | SetDimensions { width ∷ Number, height ∷ Number } a
 
 liftWithCancelerP

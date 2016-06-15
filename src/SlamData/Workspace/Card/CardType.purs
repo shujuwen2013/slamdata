@@ -46,6 +46,8 @@ import Halogen.HTML.Properties.Indexed as HP
 import SlamData.Render.Common (glyph)
 import SlamData.Render.CSS as Rc
 
+import Test.StrongCheck as SC
+
 data CardType
   = Ace AceMode
   | Search
@@ -90,9 +92,14 @@ data AceMode
 derive instance eqAceMode ∷ Eq AceMode
 derive instance ordAceMode ∷ Ord AceMode
 
-instance showAcemode ∷ Show AceMode where
+instance showAceMode ∷ Show AceMode where
   show MarkdownMode = "MarkdownMode"
   show SQLMode = "SQLMode"
+
+instance arbitraryAceMode ∷ SC.Arbitrary AceMode where
+  arbitrary = do
+    b ← SC.arbitrary
+    pure $ if b then MarkdownMode else SQLMode
 
 instance encodeJsonCardType ∷ EncodeJson CardType where
   encodeJson (Ace MarkdownMode) = encodeJson "ace-markdown"
