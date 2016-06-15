@@ -79,13 +79,14 @@ import SlamData.Workspace.Card.Port as Port
 import SlamData.Workspace.Deck.BackSide.Component as Back
 import SlamData.Workspace.Deck.Common (DeckHTML, DeckDSL)
 import SlamData.Workspace.Deck.Component.ChildSlot (cpBackSide, cpCard, cpIndicator, ChildQuery, ChildSlot, CardSlot(..), cpDialog)
-import SlamData.Workspace.Deck.Component.Query (QueryP, Query(..), DeckAction(..), DeckLevel(..))
-import SlamData.Workspace.Deck.Model (Deck, deckIndex)
+import SlamData.Workspace.Deck.Component.Query (QueryP, Query(..), DeckAction(..))
 import SlamData.Workspace.Deck.Component.State as DCS
 import SlamData.Workspace.Deck.DeckId (DeckId(..))
+import SlamData.Workspace.Deck.DeckLevel as DL
 import SlamData.Workspace.Deck.Dialog.Component as Dialog
 import SlamData.Workspace.Deck.Gripper as Gripper
 import SlamData.Workspace.Deck.Indicator.Component as Indicator
+import SlamData.Workspace.Deck.Model (Deck, deckIndex)
 import SlamData.Workspace.Deck.Model as Model
 import SlamData.Workspace.Model as WS
 import SlamData.Workspace.Deck.Slider as Slider
@@ -130,7 +131,7 @@ render st =
                 , HP.title "Flip deck"
                 ]
                 [ HH.text "" ]
-            , if st.level == Root
+            , if st.level ≡ DL.root
                 then HH.button
                        [ ARIA.label "Zoom deck"
                        , HP.classes [ CSS.zoomOutDeck ]
@@ -721,7 +722,7 @@ saveDeck = do
           -- runPendingCards would be deferred if there had previously been
           -- no `deckPath`. We need to flush the queue.
           when (isNothing $ DCS.deckPath st) runPendingCards
-          when (st.level == Root) $
+          when (st.level ≡ DL.root) $
             H.gets DCS.deckPath >>= traverse_ \path' → do
               let deckHash = mkWorkspaceHash path' (WA.Load st.accessType) st.globalVarMap
               H.fromEff $ locationObject >>= Location.setHash deckHash

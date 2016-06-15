@@ -54,6 +54,7 @@ import SlamData.Workspace.Deck.Common (wrappedDeck, defaultPosition)
 import SlamData.Workspace.Deck.Component as Deck
 import SlamData.Workspace.Deck.DeckId (DeckId(..))
 import SlamData.Workspace.Deck.Model as DM
+import SlamData.Workspace.Deck.DeckLevel as DL
 import SlamData.Workspace.Model as Model
 import SlamData.Workspace.StateMode (StateMode(..))
 
@@ -165,7 +166,7 @@ eval (Load path deckId next) = do
 
   loadDeck deckId = void do
     H.modify _ { stateMode = Ready }
-    queryDeck $ H.action $ Deck.Load path deckId Deck.Root
+    queryDeck $ H.action $ Deck.Load path deckId DL.root
 
   loadRoot =
     rootDeck path >>=
@@ -193,7 +194,7 @@ peek = (peekOpaqueQuery peekDeck) ⨁ (const $ pure unit)
             [ Deck.SetParent (Tuple newId' (CID.CardId 0))
             , Deck.Save
             , Deck.Reset (Just path)
-            , Deck.SetModel newId' newDeck Deck.Root
+            , Deck.SetModel newId' newDeck DL.root
             , Deck.Save
             ]
 

@@ -83,8 +83,9 @@ import SlamData.Workspace.Card.CardType as CT
 import SlamData.Workspace.Card.Model as Card
 import SlamData.Workspace.Card.Port.VarMap as Port
 
-import SlamData.Workspace.Deck.Component.Query (Query, DeckLevel(..))
+import SlamData.Workspace.Deck.Component.Query (Query)
 import SlamData.Workspace.Deck.DeckId (DeckId, deckIdToString)
+import SlamData.Workspace.Deck.DeckLevel as DL
 import SlamData.Workspace.Deck.Model as Model
 import SlamData.Workspace.StateMode (StateMode(..))
 
@@ -123,7 +124,7 @@ type State =
   , sliderTransition ∷ Boolean
   , sliderTranslateX ∷ Number
   , cardElementWidth ∷ Maybe Number
-  , level ∷ DeckLevel
+  , level ∷ DL.DeckLevel
   }
 
 -- | A record used to represent card definitions in the deck.
@@ -153,7 +154,7 @@ initialDeck =
   , sliderTransition: false
   , sliderTranslateX: 0.0
   , cardElementWidth: Nothing
-  , level: Root
+  , level: DL.root
   }
 
 -- | The unique identifier of the deck. If it's a fresh, unsaved deck, the id

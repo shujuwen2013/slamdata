@@ -14,21 +14,25 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -}
 
-module SlamData.Workspace.Card.Common where
+module SlamData.Workspace.Deck.DeckLevel
+  ( DeckLevel
+  , runDeckLevel
+  , root
+  , succ
+  ) where
 
 import SlamData.Prelude
 
-import SlamData.Workspace.Card.CardId (CardId)
-import SlamData.Workspace.Deck.DeckId (DeckId)
-import SlamData.Workspace.Deck.DeckLevel (DeckLevel)
-import SlamData.Workspace.Deck.Component.Cycle (DeckComponent)
+newtype DeckLevel = DeckLevel Int
 
-import Utils.Path (DirPath)
+derive instance eqDeckLevel ∷ Eq DeckLevel
+derive instance ordDeckLevel ∷ Ord DeckLevel
 
-type CardOptions =
-  { deckComponent ∷ DeckComponent
-  , path ∷ Maybe DirPath
-  , cardId ∷ CardId
-  , deckId ∷ Maybe DeckId
-  , level ∷ DeckLevel
-  }
+runDeckLevel ∷ DeckLevel → Int
+runDeckLevel (DeckLevel i) = i
+
+root ∷ DeckLevel
+root = DeckLevel 0
+
+succ ∷ DeckLevel → DeckLevel
+succ (DeckLevel i) = DeckLevel (i + 1)

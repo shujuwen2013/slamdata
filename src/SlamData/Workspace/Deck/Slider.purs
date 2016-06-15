@@ -235,6 +235,7 @@ renderCard comp st card index =
     , path: st.path
     , cardId: card.cardId
     , deckId: st.id
+    , level: st.level
     }
 
   cardComponent =

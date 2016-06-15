@@ -44,12 +44,15 @@ import Halogen.HTML.CSS.Indexed as HC
 import Halogen.HTML.Events.Indexed as HE
 import Halogen.HTML.Indexed as HH
 import Halogen.HTML.Properties.Indexed as HP
+import Halogen.HTML.Properties.Indexed.ARIA as ARIA
+import Halogen.Themes.Bootstrap3 as B
 
 import Math (round, floor)
 
 import SlamData.Config as Config
 import SlamData.Effects (Slam)
 import SlamData.Quasar.Data as Quasar
+import SlamData.Render.Common (glyph)
 import SlamData.Render.CSS as RC
 import SlamData.Workspace.AccessType as AT
 import SlamData.Workspace.Card.Draftboard.Common (deleteGraph)
@@ -65,8 +68,10 @@ import SlamData.Workspace.Deck.Common (wrappedDeck, defaultPosition)
 import SlamData.Workspace.Deck.Component.Query as DCQ
 import SlamData.Workspace.Deck.Component.State as DCS
 import SlamData.Workspace.Deck.DeckId (DeckId(..), deckIdToString)
+import SlamData.Workspace.Deck.DeckLevel as DL
 import SlamData.Workspace.Deck.Model as DM
 import SlamData.Workspace.Model as WS
+import SlamData.Workspace.LevelOfDetails as LOD
 
 import Utils.CSS (zIndex)
 import Utils.DOM (elementEq, scrollTop, scrollLeft, getOffsetClientRect)
@@ -75,6 +80,12 @@ import Utils.Path (DirPath)
 type DraftboardDSL = H.ParentDSL State DCS.StateP QueryC DCQ.QueryP Slam DeckId
 
 type DraftboardHTML = H.ParentHTML DCS.StateP QueryC DCQ.QueryP Slam DeckId
+
+levelOfDetails ∷ DL.DeckLevel → LOD.LevelOfDetails
+levelOfDetails dl =
+  if DL.runDeckLevel dl < 2
+    then LOD.High
+    else LOD.Low
 
 draftboardComponent ∷ CardOptions → Cp.CardComponent
 draftboardComponent opts = Cp.makeCardComponent
@@ -91,15 +102,32 @@ draftboardComponent opts = Cp.makeCardComponent
 
 render ∷ CardOptions → State → DraftboardHTML
 render opts state =
-  HH.div
-    [ HP.classes [ RC.gridPattern ]
-    , HC.style bgSize
-    , HP.ref (right ∘ H.action ∘ SetElement)
-    , HE.onMouseDown \e → pure $
-        guard (AT.isEditable state.accessType && not state.inserting) $>
-        right (H.action $ AddDeck e)
-    ]
-    $ map renderDeck (foldl Array.snoc [] $ Map.toList state.decks)
+  case levelOfDetails opts.level of
+    LOD.High →
+      HH.div
+        [ HP.classes [ RC.gridPattern ]
+        , HC.style bgSize
+        , HP.ref (right ∘ H.action ∘ SetElement)
+        , HE.onMouseDown \e → pure $
+            guard (AT.isEditable state.accessType && not state.inserting) $>
+            right (H.action $ AddDeck e)
+        ]
+        $ map renderDeck (foldl Array.snoc [] $ Map.toList state.decks)
+    LOD.Low →
+      HH.div
+        [ HP.classes [ HH.className "lod-overlay" ] ]
+        [ HH.div
+            [ HP.classes [ HH.className "card-input-minimum-lod" ] ]
+            [ HH.button
+                [ ARIA.label "Zoom to view"
+                , HP.title "Zoom to view"
+                , HP.disabled true
+                ]
+                [ glyph B.glyphiconZoomIn
+                , HH.text $ "Please, zoom to see the draftboard"
+                ]
+            ]
+        ]
 
   where
 
@@ -193,7 +221,7 @@ evalBoard opts (LoadDeck deckId next) = do
   for_ opts.path \path →
     queryDeck deckId
       $ H.action
-      $ DCQ.Load path deckId DCQ.Nested
+      $ DCQ.Load path deckId (DL.succ opts.level)
   pure next
 
 peek ∷ ∀ a. CardOptions → H.ChildF DeckId (OpaqueQuery DCQ.Query) a → DraftboardDSL Unit
@@ -322,7 +350,7 @@ addDeck opts coords = do
           }
         queryDeck deckId'
           $ H.action
-          $ DCQ.Load path deckId' DCQ.Nested
+          $ DCQ.Load path deckId' (DL.succ opts.level)
 
 saveDeck ∷ DirPath → DM.Deck → DraftboardDSL (Either Exn.Error DeckId)
 saveDeck path model = runExceptT do
@@ -366,7 +394,7 @@ wrapDeck opts oldId = do
           }
         queryDeck newId
           $ H.action
-          $ DCQ.Load path newId DCQ.Nested
+          $ DCQ.Load path newId (DL.succ opts.level)
 
 queryDeck ∷ ∀ a. DeckId → DCQ.Query a → DraftboardDSL (Maybe a)
 queryDeck deckId = H.query deckId <<< opaqueQuery

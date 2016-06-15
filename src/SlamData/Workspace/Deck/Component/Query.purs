@@ -17,7 +17,6 @@ limitations under the License.
 module SlamData.Workspace.Deck.Component.Query
   ( Query(..)
   , DeckAction(..)
-  , DeckLevel(..)
   , QueryP
   ) where
 
@@ -31,6 +30,7 @@ import Halogen.HTML.Events.Types (Event, MouseEvent)
 import SlamData.Workspace.AccessType as AT
 import SlamData.Workspace.Card.CardId (CardId)
 import SlamData.Workspace.Card.Port.VarMap as Port
+import SlamData.Workspace.Deck.DeckLevel (DeckLevel)
 import SlamData.Workspace.Deck.DeckId (DeckId)
 import SlamData.Workspace.Deck.Model (Deck)
 
@@ -70,9 +70,5 @@ data DeckAction
   = Mirror
   | Wrap
   | DeleteDeck
-
-data DeckLevel = Root | Nested
-
-derive instance eqDeckLevel ∷ Eq DeckLevel
 
 type QueryP = OpaqueQuery Query
