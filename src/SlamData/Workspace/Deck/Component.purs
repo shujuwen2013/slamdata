@@ -617,7 +617,7 @@ runStep cfg inputPort card @ { cardId } = do
   let input = { path: cfg.path, input: inputPort, cardId, globalVarMap: cfg.globalVarMap, accessType: cfg.accessType }
   card' ← currentStateOfCard card
   case Card.modelToEval card'.model of
-    Left err → pure $ Port.CardError "Could not evaluate card" -- TODO: more debuggable error message here -js
+    Left err → pure ∘ Port.CardError $ "Could not evaluate card: " <> err
     Right cmd → Eval.runEvalCard input cmd
 
 type CardUpdate = { card ∷ Card.Model, input ∷ Maybe Port, output ∷ Maybe Port}
