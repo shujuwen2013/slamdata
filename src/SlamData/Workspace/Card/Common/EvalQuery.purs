@@ -31,7 +31,7 @@ import Halogen (ParentDSL, ComponentDSL)
 import Halogen.Component.Utils as Hu
 
 import SlamData.Effects (Slam, SlamDataEffects)
-import SlamData.Workspace.Card.Eval.CardEvalT (CardEvalInput, CardEvalT, runCardEvalT, temporaryOutputResource)
+import SlamData.Workspace.Card.Eval.CardEvalT (CardEvalInput, CardEvalT, runCardEvalT, runCardEvalT_, temporaryOutputResource)
 import SlamData.Workspace.Card.Port as Port
 import SlamData.Workspace.Card.Model (AnyCardModel)
 

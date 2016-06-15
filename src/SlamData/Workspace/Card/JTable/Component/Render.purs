@@ -34,7 +34,6 @@ import Halogen.Themes.Bootstrap3 as B
 
 import SlamData.Render.Common (glyph)
 import SlamData.Render.CSS.New as CSS
-import SlamData.Workspace.Card.Common.EvalQuery (CardEvalQuery(..))
 import SlamData.Workspace.Card.JTable.Component.Query (QueryP, PageStep(..), Query(..))
 import SlamData.Workspace.Card.JTable.Component.State (State, currentPageInfo)
 import SlamData.Workspace.LevelOfDetails (LevelOfDetails(..))
@@ -141,7 +140,7 @@ submittable ∷ Array (H.ComponentHTML QueryP) → H.ComponentHTML QueryP
 submittable =
   HH.form
     [ HE.onSubmit \_ →
-        HEH.preventDefault $> Just (H.action (left ∘ NotifyRunCard))
+        HEH.preventDefault $> Just (H.action (right ∘ Update))
     ]
 
 nextButtons ∷ Boolean → H.ComponentHTML QueryP

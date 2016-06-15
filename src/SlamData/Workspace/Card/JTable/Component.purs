@@ -16,7 +16,6 @@ limitations under the License.
 
 module SlamData.Workspace.Card.JTable.Component
   ( jtableComponent
-  , queryShouldRun
   , module SlamData.Workspace.Card.JTable.Component.Query
   , module JTS
   ) where
@@ -54,21 +53,13 @@ jtableComponent =
     , _Query: makeQueryPrism _JTableQuery
     }
 
-queryShouldRun ∷ ∀ a. QueryP a → Boolean
-queryShouldRun = const false ⨁ pred
-  where
-  pred (StepPage _ _) = true
-  pred (ChangePageSize _ _) = true
-  pred _ = false
-
 -- | Evaluates generic card queries.
 evalCard ∷ Natural CEQ.CardEvalQuery (H.ComponentDSL JTS.State QueryP Slam)
 evalCard =
   case _ of
     CEQ.NotifyRunCard next → pure next
     CEQ.EvalCard info output next → do
-      for_ info.input \port →
-        CEQ.runCardEvalT $ runTable port $> port
+      for_ info.input $ CEQ.runCardEvalT_ ∘ runTable
       pure next
     CEQ.Save k → pure ∘ k =<< H.gets (Card.JTable ∘ JTS.toModel)
     CEQ.Load card next → do
@@ -90,33 +81,37 @@ runTable
   → CEQ.CardEvalT (H.ComponentDSL JTS.State QueryP Slam) Unit
 runTable =
   case _ of
-    Port.TaggedResource { tag, resource } → do
-      oldInput ← lift $ H.gets _.input
-      when (((oldInput <#> _.resource) ≠ pure resource) || ((oldInput >>= _.tag) ≠ tag))
-        $ lift $ resetState
-
-      size ←
-        lift (Quasar.count resource)
-          >>= either (throwError ∘ Exn.message) pure
-
-      lift $ H.modify $ JTS._input ?~ { resource, size, tag }
-      p ← lift $ H.gets JTS.pendingPageInfo
-
-      items ←
-        lift (Quasar.sample resource ((p.page - 1) * p.pageSize) p.pageSize)
-          >>= either (throwError ∘ Exn.message) pure
-
-      lift $
-        H.modify
-          $ (JTS._isEnteringPageSize .~ false)
-          ∘ (JTS._result ?~
-               { json: JSON.fromArray items
-               , page: p.page
-               , pageSize: p.pageSize
-               })
-
+    Port.TaggedResource trp → updateTable trp
     Port.Blocked → lift $ resetState
     _ → throwError "Expected a TaggedResource input"
+
+updateTable
+  ∷ Port.TaggedResourcePort
+  → CEQ.CardEvalT (H.ComponentDSL JTS.State QueryP Slam) Unit
+updateTable { resource, tag } = do
+  oldInput ← lift $ H.gets _.input
+  when (((oldInput <#> _.resource) ≠ pure resource) || ((oldInput >>= _.tag) ≠ tag))
+    $ lift $ resetState
+
+  size ←
+    lift (Quasar.count resource)
+      >>= either (throwError ∘ Exn.message) pure
+
+  lift $ H.modify $ JTS._input ?~ { resource, size, tag }
+  p ← lift $ H.gets JTS.pendingPageInfo
+
+  items ←
+    lift (Quasar.sample resource ((p.page - 1) * p.pageSize) p.pageSize)
+      >>= either (throwError ∘ Exn.message) pure
+
+  lift $
+    H.modify
+      $ (JTS._isEnteringPageSize .~ false)
+      ∘ (JTS._result ?~
+           { json: JSON.fromArray items
+           , page: p.page
+           , pageSize: p.pageSize
+           })
 
 -- | Resets the state while preserving settings like page size.
 resetState ∷ H.ComponentDSL JTS.State QueryP Slam Unit
@@ -145,3 +140,9 @@ evalJTable =
     SetCustomPage page next →
       H.modify (JTS.setPage page)
         $> next
+
+    Update next → do
+      input ← H.gets _.input
+      for_ input \{ resource, tag } →
+        CEQ.runCardEvalT_ $ updateTable { resource, tag }
+      pure next
