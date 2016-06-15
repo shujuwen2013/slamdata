@@ -164,15 +164,12 @@ cardEval ∷ Ec.CardEvalQuery ~> DSL
 cardEval (Ec.EvalCard info output next) = do
   H.modify $ _source .~ info.input ^? Lens._Just ∘ P._Resource
   pure next
-cardEval (Ec.NotifyRunCard next) = pure next
-cardEval (Ec.NotifyStopCard next) = pure next
 cardEval (Ec.Save k) = map (k ∘ Card.DownloadOptions) H.get
 cardEval (Ec.Load card next) = do
   case card of
     Card.DownloadOptions st → H.set st
     _ → pure unit
   pure next
-cardEval (Ec.SetCanceler _ next) = pure next
 cardEval (Ec.SetDimensions dims next) = do
   H.modify
     $ _levelOfDetails

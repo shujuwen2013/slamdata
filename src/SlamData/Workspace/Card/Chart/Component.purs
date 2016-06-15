@@ -117,8 +117,6 @@ render state =
   heightPadding = 80
 
 eval ∷ ECH.CardEvalQuery ~> ChartDSL
-eval (ECH.NotifyRunCard next) = pure next
-eval (ECH.NotifyStopCard next) = pure next
 eval (ECH.EvalCard value output next) = do
   case value.input of
     Just (ChartOptions options) → do
@@ -140,7 +138,6 @@ eval (ECH.EvalCard value output next) = do
 -- the deck is restored
 eval (ECH.Save k) = pure $ k Card.Chart
 eval (ECH.Load _ next) = pure next
-eval (ECH.SetCanceler _ next) = pure next
 eval (ECH.SetDimensions dims next) = do
   state ← H.get
   let

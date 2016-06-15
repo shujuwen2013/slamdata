@@ -62,10 +62,6 @@ eval q =
   case q of
     NC.EvalCard info output next ->
       pure next
-    NC.NotifyRunCard next →
-      pure next
-    NC.NotifyStopCard next →
-      pure next
     NC.Save k →
       H.query unit (H.request (FB.GetItems ⋙ left)) <#>
         maybe [] L.fromList
@@ -78,7 +74,6 @@ eval q =
           void ∘ H.query unit $ H.action (FB.SetItems (L.toList items) ⋙ left)
         _ → pure unit
       pure next
-    NC.SetCanceler _ next → pure next
     NC.SetDimensions _ next → pure next
 
 queryShouldRun

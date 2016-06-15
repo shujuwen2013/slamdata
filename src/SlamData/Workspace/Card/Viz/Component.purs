@@ -127,8 +127,7 @@ renderHighLOD state =
           $ [ Rc.cardInput, HH.className "card-input-maximum-lod" ]
           ⊕ (guard (state.levelOfDetails ≠ High) $> B.hidden)
       ]
-      [ renderLoading $ not state.loading
-      , renderEmpty $ state.loading || (not $ Set.isEmpty state.availableChartTypes)
+      [ renderEmpty $ not Set.isEmpty state.availableChartTypes
       , renderForm state
       ]
 
@@ -147,17 +146,6 @@ renderLowLOD state =
       [ glyph B.glyphiconPicture
       , HH.text "Please, expand to see options"
       ]
-    ]
-
-renderLoading ∷ Boolean → VizHTML
-renderLoading hidden =
-  HH.div
-    [ HP.classes
-        $ [ B.alert, B.alertInfo, Rc.loadingMessage ]
-        ⊕ (guard hidden $> B.hide)
-    ]
-    [ HH.text "Loading"
-    , HH.img [ HP.src "/img/blue-spin.gif" ]
     ]
 
 renderEmpty ∷ Boolean → VizHTML
@@ -182,8 +170,7 @@ renderForm state =
     ]
   where
   hidden ∷ Boolean
-  hidden = Set.isEmpty state.availableChartTypes || state.loading
-
+  hidden = Set.isEmpty state.availableChartTypes
 
 renderChartTypeSelector ∷ VCS.State → VizHTML
 renderChartTypeSelector state =
@@ -299,14 +286,7 @@ cardEval (EvalCard info output next) = do
     if null sample
       then H.modify (VCS._availableChartTypes .~ Set.empty)
       else H.modify (VCS._sample .~ analyzeJArray sample) *> configure
-
-  -- TODO: find a way to "bracket" the loading state like we did before. It is not
-  -- clear how to do this at the moment, since the actual activity of loading the
-  -- data takes place exterinallyin the model eval machinery. -js
-  H.modify $ VCS._loading .~ false
   pure next
-cardEval (NotifyRunCard next) = pure next
-cardEval (NotifyStopCard next) = pure next
 cardEval (Save k) = do
   st ← H.get
   config ← H.query st.chartType $ left $ H.request Form.GetConfiguration
@@ -329,7 +309,6 @@ cardEval (Load card next) = do
       pure unit
     _ → pure unit
   pure next
-cardEval (SetCanceler _ next) = pure next
 cardEval (SetDimensions dims next) = do
   H.modify
     $ VCS._levelOfDetails

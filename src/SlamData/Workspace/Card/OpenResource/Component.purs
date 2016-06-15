@@ -29,7 +29,6 @@ import Data.Lens ((?~), (.~))
 import Data.Path.Pathy (printPath, peel)
 
 import Halogen as H
-import Halogen.Component.Utils as HU
 import Halogen.HTML.Events.Indexed as HE
 import Halogen.HTML.Indexed as HH
 import Halogen.HTML.Properties.Indexed as HP
@@ -42,12 +41,11 @@ import SlamData.Quasar.FS as Quasar
 import SlamData.Render.Common (glyph)
 import SlamData.Render.CSS as Rc
 import SlamData.Workspace.Card.CardType as CT
-import SlamData.Workspace.Card.Common.EvalQuery (liftWithCanceler')
 import SlamData.Workspace.Card.Common.EvalQuery as Eq
 import SlamData.Workspace.Card.Model as Card
 import SlamData.Workspace.Card.Component as NC
 import SlamData.Workspace.Card.OpenResource.Component.Query (QueryP, Query(..))
-import SlamData.Workspace.Card.OpenResource.Component.State (State, initialState, _selected, _browsing, _items, _loading, _levelOfDetails)
+import SlamData.Workspace.Card.OpenResource.Component.State (State, initialState, _selected, _browsing, _items, _levelOfDetails)
 import SlamData.Workspace.LevelOfDetails (LevelOfDetails(..))
 
 
@@ -100,8 +98,7 @@ renderHighLOD ∷ State → HTML
 renderHighLOD state =
   HH.div
     [ HP.classes
-         $ (Rc.loading <$ guard state.loading)
-         ⊕ [ HH.className "card-input-maximum-lod" ]
+         $ [ HH.className "card-input-maximum-lod" ]
          ⊕ (B.hidden <$ guard (state.levelOfDetails ≠ High))
     ]
     [ HH.div [ HP.classes [ Rc.openResourceCardMenu ] ]
@@ -168,7 +165,6 @@ eval = cardEval ⨁ openResourceEval
 
 cardEval ∷ Eq.CardEvalQuery ~> DSL
 cardEval (Eq.EvalCard info output next) = pure next
-cardEval (Eq.NotifyRunCard next) = pure next
 cardEval (Eq.Save k) = do
   mbRes ← H.gets _.selected
   k ∘ Card.OpenResource <$>
@@ -182,7 +178,6 @@ cardEval (Eq.Load card next) = do
     Card.OpenResource (Just (res @ R.File _)) → resourceSelected res
     _ → pure unit
   pure next
-cardEval (Eq.SetCanceler _ next) = pure next
 cardEval (Eq.SetDimensions dims next) = do
   H.modify
     $ (_levelOfDetails
@@ -190,15 +185,9 @@ cardEval (Eq.SetDimensions dims next) = do
             then Low
             else High)
   pure next
-cardEval (Eq.NotifyStopCard next) = pure next
-
 
 openResourceEval ∷ Query ~> DSL
 openResourceEval (ResourceSelected r next) = do
-  loading ← H.gets _.loading
-  when loading do
-    HU.sendAfter zero (left $ Eq.NotifyStopCard unit)
-    H.modify (_loading .~ false)
   resourceSelected r
   pure next
 openResourceEval (Init mres next) = do
@@ -226,14 +215,9 @@ resourceSelected r = do
 updateItems ∷ DSL Unit
 updateItems = do
   dp ← H.gets _.browsing
-  H.modify (_loading .~ true)
-  cs ←
-    Quasar.children dp
-      # liftWithCanceler'
+  cs ← Quasar.children dp
   mbSel ← H.gets _.selected
-  H.modify
-    $ (_items .~ foldMap id cs)
-    ∘ (_loading .~ false)
+  H.modify (_items .~ foldMap id cs)
 
 rearrangeItems ∷ DSL Unit
 rearrangeItems = do

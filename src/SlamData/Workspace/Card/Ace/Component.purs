@@ -74,8 +74,6 @@ aceComponent cfg = makeCardComponent
   where
 
   eval ∷ CardEvalQuery ~> DSL
-  eval (NotifyRunCard next) = pure next
-  eval (NotifyStopCard next) = pure next
   eval (EvalCard info output next) = do
     -- TODO: check!
     cfg.eval info
@@ -98,7 +96,6 @@ aceComponent cfg = makeCardComponent
           Editor.navigateFileEnd editor
       _ → pure unit
     pure next
-  eval (SetCanceler _ next) = pure next
   eval (SetDimensions dims next) = do
     H.modify
       $ _levelOfDetails

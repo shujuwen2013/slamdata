@@ -90,11 +90,8 @@ cardEval ∷ Ec.CardEvalQuery ~> DSL
 cardEval (Ec.EvalCard info output next ) = do
   for_ (info.input ^? Lens._Just ∘ P._DownloadOptions) handleDownloadPort
   pure next
-cardEval (Ec.NotifyRunCard next) = pure next
-cardEval (Ec.NotifyStopCard next) = pure next
-cardEval (Ec.Save k) = pure ∘ k $ Card.Save Nothing -- TODO: do we really need to fill this in? Looks like we didn't do anything before. -js
+cardEval (Ec.Save k) = pure (k Card.Download)
 cardEval (Ec.Load json next) = pure next
-cardEval (Ec.SetCanceler _ next) = pure next
 cardEval (Ec.SetDimensions dims next) = do
   textWidth ← H.gets $ flip getTextWidthPure "normal 14px Ubuntu" ∘ _.fileName
   let

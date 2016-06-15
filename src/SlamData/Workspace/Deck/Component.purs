@@ -68,7 +68,6 @@ import SlamData.Workspace.Card.CardId (CardId(..))
 import SlamData.Workspace.Card.CardType as CT
 import SlamData.Workspace.Card.Model as Card
 import SlamData.Workspace.Card.Eval as Eval
-import SlamData.Workspace.Card.Common.EvalQuery as CEQ
 import SlamData.Workspace.Card.Component (CardQueryP, CardQuery(..), InnerCardQuery, AnyCardQuery(..), _NextQuery)
 import SlamData.Workspace.Card.Component.Query as CQ
 import SlamData.Workspace.Card.Draftboard.Common as DBC
@@ -470,19 +469,13 @@ createCard cardType = do
   updateActiveCardAndIndicator
   triggerSave
 
--- | Peek on the inner card components to observe `NotifyRunCard`, which is
--- | raised by actions within a card that should cause the card to run.
 peekCardInner
   ∷ ∀ a
   . CardId
   → H.ChildF Unit InnerCardQuery a
   → DeckDSL Unit
 peekCardInner cardId (H.ChildF _ q) =
-  (peekEvalCard cardId) ⨁ (peekAnyCard cardId) $ q
-
-peekEvalCard ∷ ∀ a. CardId → CEQ.CardEvalQuery a → DeckDSL Unit
-peekEvalCard cardId (CEQ.NotifyRunCard _) = runCard cardId
-peekEvalCard _ _ = pure unit
+  const (pure unit) ⨁ (peekAnyCard cardId) $ q
 
 peekAnyCard ∷ ∀ a. CardId → AnyCardQuery a → DeckDSL Unit
 peekAnyCard cardId q = do

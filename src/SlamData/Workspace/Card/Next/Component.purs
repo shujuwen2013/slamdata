@@ -117,12 +117,8 @@ cardEval (Ec.EvalCard value output next) = do
     Just port →
       updatePort port
   pure next
-  -- map k ∘ Ec.runCardEvalT $ pure P.Blocked
-cardEval (Ec.NotifyRunCard next) = pure next
-cardEval (Ec.NotifyStopCard next) = pure next
 cardEval (Ec.Save k) = pure $ k Card.NextAction
 cardEval (Ec.Load _ next) = pure next
-cardEval (Ec.SetCanceler _ next) = pure next
 cardEval (Ec.SetDimensions _ next) = pure next
 
 updatePort ∷ P.Port → NextDSL Unit

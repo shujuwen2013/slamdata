@@ -69,12 +69,6 @@ cardEval q =
     CEQ.EvalCard {input} output next → do
       H.modify ∘ Lens.set ECS._message $ input ^? Lens._Just ∘ Port._CardError
       pure next
-    CEQ.NotifyRunCard next →
-      pure next
-    CEQ.NotifyStopCard next →
-      pure next
-    CEQ.SetCanceler _ next →
-      pure next
     CEQ.SetDimensions _ next →
       pure next
     CEQ.Save k →

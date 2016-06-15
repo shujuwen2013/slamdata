@@ -18,6 +18,7 @@ module SlamData.Workspace.Card.Eval.CardEvalT
   ( CardEvalInput
   , CardEvalT
   , runCardEvalT
+  , runCardEvalT_
   , temporaryOutputResource
   ) where
 
@@ -75,6 +76,10 @@ instance monadErrorCardEvalT ∷ Monad m ⇒ EC.MonadError String (CardEvalT m) 
 runCardEvalT ∷ ∀ m. Functor m ⇒ CardEvalT m Port.Port → m Port.Port
 runCardEvalT (CardEvalT m) =
   ET.runExceptT m <#> either Port.CardError id
+
+runCardEvalT_ ∷ ∀ m. Functor m ⇒ CardEvalT m Unit → m Unit
+runCardEvalT_ (CardEvalT m) =
+  ET.runExceptT m <#> either (const unit) id
 
 temporaryOutputResource ∷
   ∀ r

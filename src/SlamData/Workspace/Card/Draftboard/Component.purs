@@ -164,9 +164,6 @@ evalCard (Ceq.EvalCard input output next) = do
   H.modify $ _accessType .~ input.accessType
   H.queryAll ∘ opaqueQuery ∘ H.action $ DCQ.SetAccessType input.accessType
   pure next
-evalCard (Ceq.NotifyRunCard next) = pure next
-evalCard (Ceq.NotifyStopCard next) = pure next
-evalCard (Ceq.SetCanceler canceler next) = pure next
 evalCard (Ceq.SetDimensions _ next) = pure next
 evalCard (Ceq.Save k) = map (k ∘ Card.Draftboard ∘ modelFromState) H.get
 evalCard (Ceq.Load card next) = do

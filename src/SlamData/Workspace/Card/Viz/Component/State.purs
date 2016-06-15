@@ -19,7 +19,6 @@ module SlamData.Workspace.Card.Viz.Component.State
   , initialState
   , _chartType
   , _availableChartTypes
-  , _loading
   , _sample
   , _axisLabelAngle
   , _axisLabelFontSize
@@ -50,7 +49,6 @@ type State =
   { chartType ∷ ChartType
   , availableChartTypes ∷ Set.Set ChartType
   , sample ∷ M.Map JCursor Axis
-  , loading ∷ Boolean
   , axisLabelFontSize ∷ Int
   , axisLabelAngle ∷ Int
   , levelOfDetails ∷ LevelOfDetails
@@ -60,7 +58,6 @@ initialState ∷ State
 initialState =
   { chartType: Pie
   , availableChartTypes: Set.empty
-  , loading: true
   , sample: M.empty
   , axisLabelFontSize: 12
   , axisLabelAngle: 30
@@ -72,9 +69,6 @@ _chartType = lens _.chartType _{chartType = _}
 
 _availableChartTypes ∷ forall a r. LensP {availableChartTypes ∷ a |r} a
 _availableChartTypes = lens _.availableChartTypes _{availableChartTypes = _}
-
-_loading ∷ forall a r. LensP {loading ∷ a | r} a
-_loading = lens _.loading _{loading = _}
 
 _sample ∷ forall a r. LensP {sample ∷ a | r} a
 _sample = lens _.sample _{sample = _}

@@ -20,7 +20,6 @@ module SlamData.Workspace.Card.OpenResource.Component.State
   , _items
   , _browsing
   , _selected
-  , _loading
   , _levelOfDetails
   ) where
 
@@ -38,7 +37,6 @@ type State =
   { items ∷ Array R.Resource
   , browsing ∷ Up.DirPath
   , selected ∷ Maybe Up.FilePath
-  , loading ∷ Boolean
   , levelOfDetails ∷ LevelOfDetails
   }
 
@@ -47,7 +45,6 @@ initialState =
   { items: [ ]
   , browsing: rootDir
   , selected: Nothing
-  , loading: false
   , levelOfDetails: High
   }
 
@@ -60,9 +57,6 @@ _browsing = lens (_.browsing) (_{browsing = _})
 
 _selected ∷ ∀ a r. LensP { selected ∷ a|r} a
 _selected = lens (_.selected) (_{selected = _})
-
-_loading ∷ ∀ a r. LensP { loading ∷ a|r} a
-_loading = lens (_.loading) (_{loading = _})
 
 _levelOfDetails ∷ ∀ a r. LensP {levelOfDetails ∷ a|r} a
 _levelOfDetails = lens (_.levelOfDetails) (_{levelOfDetails = _})
