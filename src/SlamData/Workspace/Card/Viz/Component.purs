@@ -127,8 +127,7 @@ renderHighLOD state =
           $ [ Rc.cardInput, HH.className "card-input-maximum-lod" ]
           ⊕ (guard (state.levelOfDetails ≠ High) $> B.hidden)
       ]
-      [ renderLoading $ not state.loading
-      , renderEmpty $ state.loading || (not $ Set.isEmpty state.availableChartTypes)
+      [ renderEmpty $ not Set.isEmpty state.availableChartTypes
       , renderForm state
       ]
 
@@ -147,17 +146,6 @@ renderLowLOD state =
       [ glyph B.glyphiconPicture
       , HH.text "Please, expand to see options"
       ]
-    ]
-
-renderLoading ∷ Boolean → VizHTML
-renderLoading hidden =
-  HH.div
-    [ HP.classes
-        $ [ B.alert, B.alertInfo, Rc.loadingMessage ]
-        ⊕ (guard hidden $> B.hide)
-    ]
-    [ HH.text "Loading"
-    , HH.img [ HP.src "/img/blue-spin.gif" ]
     ]
 
 renderEmpty ∷ Boolean → VizHTML
@@ -182,8 +170,7 @@ renderForm state =
     ]
   where
   hidden ∷ Boolean
-  hidden = Set.isEmpty state.availableChartTypes || state.loading
-
+  hidden = Set.isEmpty state.availableChartTypes
 
 renderChartTypeSelector ∷ VCS.State → VizHTML
 renderChartTypeSelector state =
