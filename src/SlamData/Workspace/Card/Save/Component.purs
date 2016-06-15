@@ -109,7 +109,6 @@ cardEval (Eq.Load card next) = do
         ∘ (_confirmedPath .~ (PU.parseFilePath =<< s))
     _ → pure unit
   pure next
-cardEval (Eq.SetCanceler _ next) = pure next
 cardEval (Eq.SetDimensions _ next) = pure next
 
 saveEval ∷ Query ~> SaveDSL

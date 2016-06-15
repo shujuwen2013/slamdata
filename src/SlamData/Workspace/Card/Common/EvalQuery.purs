@@ -16,21 +16,11 @@ limitations under the License.
 
 module SlamData.Workspace.Card.Common.EvalQuery
   ( CardEvalQuery(..)
-  , liftWithCanceler
-  , liftWithCanceler'
-  , liftWithCancelerP
-  , liftWithCancelerP'
   , module SlamData.Workspace.Card.Eval.CardEvalT
   ) where
 
 import SlamData.Prelude
 
-import Control.Monad.Aff (Canceler)
-
-import Halogen (ParentDSL, ComponentDSL)
-import Halogen.Component.Utils as Hu
-
-import SlamData.Effects (Slam, SlamDataEffects)
 import SlamData.Workspace.Card.Eval.CardEvalT (CardEvalInput, CardEvalT, runCardEvalT, runCardEvalT_, temporaryOutputResource)
 import SlamData.Workspace.Card.Port as Port
 import SlamData.Workspace.Card.Model (AnyCardModel)
@@ -44,41 +34,6 @@ import SlamData.Workspace.Card.Model (AnyCardModel)
 -- |   allowed to update the card component state.
 data CardEvalQuery a
   = EvalCard CardEvalInput (Maybe Port.Port) a
-  | SetCanceler (Canceler SlamDataEffects) a
   | Save (AnyCardModel → a)
   | Load AnyCardModel a
   | SetDimensions { width ∷ Number, height ∷ Number } a
-
-liftWithCancelerP
-  ∷ ∀ a state slot innerQuery innerState
-  . Slam a
-  → ParentDSL
-      state innerState
-      CardEvalQuery innerQuery
-      Slam slot a
-liftWithCancelerP =
-  Hu.liftWithCanceler' SetCanceler
-
-liftWithCancelerP'
-  ∷ ∀ a state innerState innerQuery query slot
-  . Slam a
-  → ParentDSL
-      state innerState
-      (Coproduct CardEvalQuery query) innerQuery
-      Slam slot a
-liftWithCancelerP' =
-  Hu.liftWithCanceler' (\c u → left $ SetCanceler c u)
-
-liftWithCanceler
-  ∷ ∀ a state
-  . Slam a
-  → ComponentDSL state CardEvalQuery Slam a
-liftWithCanceler =
-  Hu.liftWithCanceler SetCanceler
-
-liftWithCanceler'
-  ∷ ∀ state query a
-  . Slam a
-  → ComponentDSL state (Coproduct CardEvalQuery query) Slam a
-liftWithCanceler' =
-  Hu.liftWithCanceler (\c u → left $ SetCanceler c u)

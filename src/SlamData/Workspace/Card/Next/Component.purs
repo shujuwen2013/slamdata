@@ -119,7 +119,6 @@ cardEval (Ec.EvalCard value output next) = do
   pure next
 cardEval (Ec.Save k) = pure $ k Card.NextAction
 cardEval (Ec.Load _ next) = pure next
-cardEval (Ec.SetCanceler _ next) = pure next
 cardEval (Ec.SetDimensions _ next) = pure next
 
 updatePort ∷ P.Port → NextDSL Unit

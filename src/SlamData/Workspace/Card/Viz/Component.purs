@@ -309,7 +309,6 @@ cardEval (Load card next) = do
       pure unit
     _ → pure unit
   pure next
-cardEval (SetCanceler _ next) = pure next
 cardEval (SetDimensions dims next) = do
   H.modify
     $ VCS._levelOfDetails

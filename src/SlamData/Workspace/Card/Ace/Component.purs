@@ -96,7 +96,6 @@ aceComponent cfg = makeCardComponent
           Editor.navigateFileEnd editor
       _ → pure unit
     pure next
-  eval (SetCanceler _ next) = pure next
   eval (SetDimensions dims next) = do
     H.modify
       $ _levelOfDetails

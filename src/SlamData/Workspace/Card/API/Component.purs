@@ -74,7 +74,6 @@ eval q =
           void ∘ H.query unit $ H.action (FB.SetItems (L.toList items) ⋙ left)
         _ → pure unit
       pure next
-    NC.SetCanceler _ next → pure next
     NC.SetDimensions _ next → pure next
 
 queryShouldRun

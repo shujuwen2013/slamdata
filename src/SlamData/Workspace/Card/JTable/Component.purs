@@ -66,7 +66,6 @@ evalCard =
         Card.JTable model → H.set $ JTS.fromModel model
         _ → pure unit
       pure next
-    CEQ.SetCanceler _ next → pure next
     CEQ.SetDimensions dims next → do
       H.modify
         $ JTS._levelOfDetails

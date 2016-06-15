@@ -83,7 +83,6 @@ cardEval q =
         Card.Search input → H.modify $ _searchString .~ input
         _ → pure unit
       pure next
-    NC.SetCanceler _ next → pure next
     NC.SetDimensions _ next → pure next
 
 searchEval ∷ Natural SearchQuery DSL

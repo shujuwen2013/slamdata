@@ -134,5 +134,4 @@ evalCEQ (Load card next) = do
         H.query unit $ H.action (SD.PopulateForm state)
     _ → pure unit
   pure next
-evalCEQ (SetCanceler _ next) = pure next
 evalCEQ (SetDimensions _ next) = pure next

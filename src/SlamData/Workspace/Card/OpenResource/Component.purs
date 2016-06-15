@@ -41,7 +41,6 @@ import SlamData.Quasar.FS as Quasar
 import SlamData.Render.Common (glyph)
 import SlamData.Render.CSS as Rc
 import SlamData.Workspace.Card.CardType as CT
-import SlamData.Workspace.Card.Common.EvalQuery (liftWithCanceler')
 import SlamData.Workspace.Card.Common.EvalQuery as Eq
 import SlamData.Workspace.Card.Model as Card
 import SlamData.Workspace.Card.Component as NC
@@ -179,7 +178,6 @@ cardEval (Eq.Load card next) = do
     Card.OpenResource (Just (res @ R.File _)) → resourceSelected res
     _ → pure unit
   pure next
-cardEval (Eq.SetCanceler _ next) = pure next
 cardEval (Eq.SetDimensions dims next) = do
   H.modify
     $ (_levelOfDetails
@@ -217,7 +215,7 @@ resourceSelected r = do
 updateItems ∷ DSL Unit
 updateItems = do
   dp ← H.gets _.browsing
-  cs ← Quasar.children dp # liftWithCanceler'
+  cs ← Quasar.children dp
   mbSel ← H.gets _.selected
   H.modify (_items .~ foldMap id cs)
 

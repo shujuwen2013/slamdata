@@ -86,5 +86,4 @@ evalCard q =
       pure next
     NC.Save k -> pure $ k Card.APIResults
     NC.Load _ next -> pure next
-    NC.SetCanceler _ next -> pure next
     NC.SetDimensions _ next -> pure next

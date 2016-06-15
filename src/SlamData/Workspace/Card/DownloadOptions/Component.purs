@@ -170,7 +170,6 @@ cardEval (Ec.Load card next) = do
     Card.DownloadOptions st → H.set st
     _ → pure unit
   pure next
-cardEval (Ec.SetCanceler _ next) = pure next
 cardEval (Ec.SetDimensions dims next) = do
   H.modify
     $ _levelOfDetails

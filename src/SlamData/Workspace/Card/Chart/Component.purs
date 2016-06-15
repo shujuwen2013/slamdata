@@ -138,7 +138,6 @@ eval (ECH.EvalCard value output next) = do
 -- the deck is restored
 eval (ECH.Save k) = pure $ k Card.Chart
 eval (ECH.Load _ next) = pure next
-eval (ECH.SetCanceler _ next) = pure next
 eval (ECH.SetDimensions dims next) = do
   state ← H.get
   let

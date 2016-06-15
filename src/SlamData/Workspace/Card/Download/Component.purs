@@ -92,7 +92,6 @@ cardEval (Ec.EvalCard info output next ) = do
   pure next
 cardEval (Ec.Save k) = pure (k Card.Download)
 cardEval (Ec.Load json next) = pure next
-cardEval (Ec.SetCanceler _ next) = pure next
 cardEval (Ec.SetDimensions dims next) = do
   textWidth ← H.gets $ flip getTextWidthPure "normal 14px Ubuntu" ∘ _.fileName
   let
