@@ -86,9 +86,6 @@ evalCard =
              else High
       pure next
 
--- TODO: we ought to lift this into the new Eval machinery, but it's not clear how
--- to get the information (table items) back to the cell, since they will not be
--- manifest in the output port. -js
 runTable
   ∷ Port.Port
   → CEQ.CardEvalT (H.ComponentDSL JTS.State QueryP Slam) Unit
