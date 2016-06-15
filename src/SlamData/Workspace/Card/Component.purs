@@ -27,7 +27,6 @@ import SlamData.Config as Config
 
 import Data.Time (Milliseconds(..))
 import Data.Lens (PrismP, (.~), review, preview, clonePrism)
-import Data.Visibility (Visibility(..))
 
 import Halogen as H
 import Halogen.Component.Utils (sendAfter')
@@ -64,22 +63,17 @@ makeCardComponent def = makeCardComponentPart def render
     → CS.CardState
     → CR.CardHTML
   render component initialState cs =
-    if cs.visibility ≡ Invisible
-      then HH.text ""
-      else shown cs
-    where
-    shown cs =
-      HH.div
-        [ HP.classes $ [ CSS.deckCard ]
-        , HP.ref (H.action ∘ CQ.SetHTMLElement)
-        ]
-        $ fold
-          [ CR.header def.cardType cs
-          , [ HH.div
-                [ HP.classes $ cardClasses def.cardType ]
-                [ HH.slot unit \_ → {component, initialState} ]
-            ]
+    HH.div
+      [ HP.classes $ [ CSS.deckCard ]
+      , HP.ref (H.action ∘ CQ.SetHTMLElement)
+      ]
+      $ fold
+        [ CR.header def.cardType cs
+        , [ HH.div
+              [ HP.classes $ cardClasses def.cardType ]
+              [ HH.slot unit \_ → {component, initialState} ]
           ]
+        ]
 
 -- | Constructs a card component from a record with the necessary properties and
 -- | a render function.

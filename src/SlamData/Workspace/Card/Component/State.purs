@@ -19,7 +19,6 @@ module SlamData.Workspace.Card.Component.State
   , CardStateP
   , initialCardState
   , _accessType
-  , _visibility
   , _output
   , _element
   , AnyCardState
@@ -43,7 +42,6 @@ module SlamData.Workspace.Card.Component.State
 import SlamData.Prelude
 
 import Data.Lens (LensP, lens, PrismP, prism')
-import Data.Visibility (Visibility(..))
 
 import DOM.HTML.Types (HTMLElement)
 
@@ -79,7 +77,6 @@ import SlamData.Workspace.Card.Viz.Component.State as Viz
 -- |   completed running.
 type CardState =
   { accessType ∷ AccessType
-  , visibility ∷ Visibility
   , output ∷ Maybe Port
   , element ∷ Maybe HTMLElement
   }
@@ -90,16 +87,12 @@ type CardStateP = ParentState CardState AnyCardState CardQuery InnerCardQuery Sl
 initialCardState ∷ CardState
 initialCardState =
   { accessType: Editable
-  , visibility: Visible
   , output: Nothing
   , element: Nothing
   }
 
 _accessType ∷ LensP CardState AccessType
 _accessType = lens _.accessType (_ { accessType = _ })
-
-_visibility ∷ LensP CardState Visibility
-_visibility = lens _.visibility (_ { visibility = _ })
 
 -- | The last output value computed for the card. This may not be up to date
 -- | with the exact state of the card, but is the most recent result from when
