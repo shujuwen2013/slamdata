@@ -90,7 +90,6 @@ eval = coproduct cardEval saveEval
 cardEval ∷ Natural Eq.CardEvalQuery SaveDSL
 cardEval (Eq.EvalCard info output next) = pure next
 cardEval (Eq.NotifyRunCard next) = pure next
-cardEval (Eq.NotifyStopCard next) = pure next
 cardEval (Eq.Save k) = do
   pt ← H.gets _.pathString
   pure ∘ k ∘ Card.Save $ Pt.parseAbsFile pt $> pt

@@ -66,7 +66,6 @@ evalCard ∷ Natural CEQ.CardEvalQuery (H.ComponentDSL JTS.State QueryP Slam)
 evalCard =
   case _ of
     CEQ.NotifyRunCard next → pure next
-    CEQ.NotifyStopCard next → pure next
     CEQ.EvalCard info output next → do
       for_ info.input \port →
         CEQ.runCardEvalT $ runTable port $> port

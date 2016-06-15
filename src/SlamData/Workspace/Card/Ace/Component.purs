@@ -75,7 +75,6 @@ aceComponent cfg = makeCardComponent
 
   eval ∷ CardEvalQuery ~> DSL
   eval (NotifyRunCard next) = pure next
-  eval (NotifyStopCard next) = pure next
   eval (EvalCard info output next) = do
     -- TODO: check!
     cfg.eval info

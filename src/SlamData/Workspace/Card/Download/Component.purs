@@ -91,7 +91,6 @@ cardEval (Ec.EvalCard info output next ) = do
   for_ (info.input ^? Lens._Just ∘ P._DownloadOptions) handleDownloadPort
   pure next
 cardEval (Ec.NotifyRunCard next) = pure next
-cardEval (Ec.NotifyStopCard next) = pure next
 cardEval (Ec.Save k) = pure (k Card.Download)
 cardEval (Ec.Load json next) = pure next
 cardEval (Ec.SetCanceler _ next) = pure next

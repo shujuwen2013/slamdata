@@ -117,7 +117,6 @@ evalQ (Init next) = do
 
 evalCEQ ∷ CardEvalQuery ~> MarkdownDSL
 evalCEQ (NotifyRunCard next) = pure next
-evalCEQ (NotifyStopCard next) = pure next
 evalCEQ (EvalCard info output next) = do
   for_ (info.input ^? Lens._Just ∘ Port._SlamDown) \sd → do
     H.modify (_ { input = Just sd })

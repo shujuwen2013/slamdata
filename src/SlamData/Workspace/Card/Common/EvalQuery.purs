@@ -47,7 +47,6 @@ import SlamData.Workspace.Card.Model (AnyCardModel)
 data CardEvalQuery a
   = EvalCard CardEvalInput (Maybe Port.Port) a
   | NotifyRunCard a
-  | NotifyStopCard a
   | SetCanceler (Canceler SlamDataEffects) a
   | Save (AnyCardModel → a)
   | Load AnyCardModel a
