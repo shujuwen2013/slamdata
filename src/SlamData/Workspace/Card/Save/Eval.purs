@@ -43,21 +43,19 @@ eval
   → CET.CardEvalT m Port.TaggedResourcePort
 eval info mfp resource =
   case mfp of
-    Nothing -> evalX (CET.temporaryOutputResource info) resource
+    Nothing -> eval' (CET.temporaryOutputResource info) resource
     Just pt ->
       case PU.parseAnyPath pt of
-        Just (Right fp) → evalX fp resource
+        Just (Right fp) → eval' fp resource
         _ → EC.throwError $ pt ⊕ " is not a valid file path"
 
-evalX
+eval'
   ∷ ∀ m
   . (Monad m, Affable SlamDataEffects m)
   ⇒ PU.FilePath
   → FilePath
   → CET.CardEvalT m Port.TaggedResourcePort
-evalX fp resource = do
-  traceAnyA "evalX"
-  traceAnyA (show fp)
+eval' fp resource = do
 
   outputResource ← liftQ $
     QQ.fileQuery resource fp "select * from {{path}}" SM.empty
