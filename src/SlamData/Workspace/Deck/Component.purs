@@ -31,7 +31,6 @@ import Control.UI.Browser (newTab, locationObject, locationString, setHref)
 
 import Data.Array as Array
 import Data.Lens ((.~), (%~), (^?), (?~))
-import Data.Lens as Lens
 import Data.Lens.Prism.Coproduct (_Right)
 import Data.List as L
 import Data.Map as Map
@@ -65,7 +64,7 @@ import SlamData.Render.Common (glyph)
 import SlamData.Render.CSS as CSS
 import SlamData.Workspace.AccessType as AT
 import SlamData.Workspace.Action as WA
-import SlamData.Workspace.Card.CardId (CardId(..), _CardId)
+import SlamData.Workspace.Card.CardId (CardId(..))
 import SlamData.Workspace.Card.CardType as CT
 import SlamData.Workspace.Card.Model as Card
 import SlamData.Workspace.Card.Eval as Eval
@@ -75,7 +74,7 @@ import SlamData.Workspace.Card.Component.Query as CQ
 import SlamData.Workspace.Card.Draftboard.Common as DBC
 import SlamData.Workspace.Card.JTable.Component as JTable
 import SlamData.Workspace.Card.Next.Component as Next
-import SlamData.Workspace.Card.Port (Port(..))
+import SlamData.Workspace.Card.Port (Port)
 import SlamData.Workspace.Card.Port as Port
 import SlamData.Workspace.Deck.BackSide.Component as Back
 import SlamData.Workspace.Deck.Common (DeckHTML, DeckDSL)
@@ -264,7 +263,8 @@ eval (Reset dir next) = do
     , stateMode = Ready
     , accessType = st.accessType
     }
-  updateIndicatorAndNextAction
+  runPendingCards
+  updateActiveCardAndIndicator
   pure next
 eval (SetName name next) =
   H.modify (DCS._name .~ Just name) $> next
@@ -275,7 +275,7 @@ eval (SetAccessType aType next) = do
   H.modify $ DCS._accessType .~ aType
   unless (AT.isEditable aType)
     $ H.modify (DCS._displayMode .~ DCS.Normal)
-  updateIndicatorAndNextAction
+  updateActiveCardAndIndicator
   pure next
 eval (GetPath k) = k <$> H.gets DCS.deckPath
 eval (GetId k) = k <$> H.gets _.id
@@ -376,8 +376,9 @@ peekBackSide (Back.DoAction action _) =
             H.fromAff ∘ runPar ∘ traverse_ (Par ∘ DBC.deleteGraph path)
         H.set $ snd rem
         triggerSave
-        updateIndicatorAndNextAction
+        updateActiveCardAndIndicator
         H.modify $ DCS._displayMode .~ DCS.Normal
+        runPendingCards
       void $ H.queryAll' cpCard $ left $ H.action UpdateDimensions
     Back.Share → do
       url ← mkShareURL SM.empty
@@ -428,47 +429,8 @@ queryCard cid =
     ∘ H.ChildF unit
     ∘ right
 
-updateIndicatorAndNextAction ∷ DeckDSL Unit
-updateIndicatorAndNextAction = do
-  { displayCards, accessType } ← H.get
-  let realCards = Array.filter (Lens.has _CardId ∘ _.cardId) displayCards
-
-  info ←
-    case _.cardId <$> Array.last realCards of
-      Just (cid @ CardId _) → do
-        lastOutput ← map join $ H.query' cpCard (CardSlot cid) $ left $ H.request GetOutput
-        pure
-          { lastRealCardId: Just cid
-          , cardToAdd:
-              case lastOutput of
-                Just (Port.CardError err) → Just errorCard
-                Just Port.Blocked → Just errorCard -- TODO: what's the correct thing to do here? In fact, I don't know if case can actually happen in practice.
-                _ → if AT.isEditable accessType then Just nextActionCard else Nothing
-          }
-      _ →
-        pure
-          { lastRealCardId: Nothing
-          , cardToAdd: if AT.isEditable accessType then Just nextActionCard else Nothing
-          }
-
-  H.modify $ DCS._displayCards .~ maybe realCards (Array.snoc realCards) info.cardToAdd
-
-  for_ info.lastRealCardId \lastRealCardId → do
-    state ← H.get
-    for_ (DCS.cardIndexFromId lastRealCardId state) \ix → do
-      for_ (DCS.cardIdFromIndex (ix + 1) state) \followingCardId → do
-        minput ← H.query' cpCard (CardSlot lastRealCardId) $ left $ H.request GetOutput
-        for_ minput \input → do
-          let
-            evalInput =
-              { path: state.path
-              , globalVarMap: state.globalVarMap
-              , cardId: followingCardId
-              , accessType: state.accessType
-              , input
-              }
-          H.query' cpCard (CardSlot followingCardId) $ left $ H.action (UpdateCard evalInput Nothing)
-
+updateActiveCardAndIndicator ∷ DeckDSL Unit
+updateActiveCardAndIndicator = do
   activeCardIndex ← H.gets _.activeCardIndex
   case activeCardIndex of
     Nothing → do
@@ -478,7 +440,6 @@ updateIndicatorAndNextAction = do
           lastRealCardIndex = DCS.findLastRealCardIndex st
         in st { activeCardIndex = Just $ fromMaybe lastCardIndex lastRealCardIndex }
     Just _ → pure unit
-
   updateIndicator
 
 updateIndicator ∷ DeckDSL Unit
@@ -502,21 +463,19 @@ updateBackSide = do
 
 createCard ∷ CT.CardType → DeckDSL Unit
 createCard cardType = do
-  cid ← H.gets DCS.findLastRealCard
-  case cid of
-    Nothing →
-      H.modify ∘ DCS.addCard $ Card.cardModelOfType cardType
-    Just cardId → do
-      (st × newCardId) ← H.gets ∘ DCS.addCard' $ Card.cardModelOfType cardType
-      setDeckState st
-      runCard newCardId
-  updateIndicatorAndNextAction
+  (st × newCardId) ← H.gets ∘ DCS.addCard' $ Card.cardModelOfType cardType
+  setDeckState st
+  runCard newCardId
+  updateActiveCardAndIndicator
   triggerSave
 
 -- | Peek on the inner card components to observe `NotifyRunCard`, which is
 -- | raised by actions within a card that should cause the card to run.
 peekCardInner
-  ∷ ∀ a. CardId → H.ChildF Unit InnerCardQuery a → DeckDSL Unit
+  ∷ ∀ a
+  . CardId
+  → H.ChildF Unit InnerCardQuery a
+  → DeckDSL Unit
 peekCardInner cardId (H.ChildF _ q) =
   (peekEvalCard cardId) ⨁ (peekAnyCard cardId) $ q
 
@@ -562,7 +521,7 @@ errorCard =
   }
 
 type RunCardsConfig =
-  { pendingCardId ∷ CardId
+  { pendingCardId ∷ Maybe CardId
   , path ∷ Maybe DirPath
   , globalVarMap ∷ Port.VarMap
   , accessType ∷ AT.AccessType
@@ -583,15 +542,15 @@ initialRunCardsState input =
   , stack: input
   }
 
-runCardsStateIsTerminal ∷ RunCardsMachine → Boolean
-runCardsStateIsTerminal m =
-  case m.state of
-    Just (CardError _) → true
-    Just Blocked → true
-    _ →
-      case m.stack of
-        L.Nil → true
-        _ → false
+runCardsStateIsTerminal ∷ RunCardsConfig → RunCardsMachine → Boolean
+runCardsStateIsTerminal cfg m =
+  case m.stack of
+    L.Nil →
+      case _.cardId <$> L.head m.cards of
+        Just ErrorCardId → true
+        Just NextActionCardId → true
+        _ → not $ AT.isEditable cfg.accessType
+    _ → false
 
 stepRunCards
   ∷ RunCardsConfig
@@ -599,10 +558,16 @@ stepRunCards
   → DeckDSL RunCardsMachine
 stepRunCards cfg m @ { state, cards, stack, outputs } =
   case stack of
-    L.Nil → pure m
+    L.Nil →
+      pure case L.head cards of
+        Just card →
+          case Map.lookup card.cardId outputs of
+            Just (Port.CardError _) → pushCard errorCard m
+            _ → pushNextActionCard m
+        Nothing → pushNextActionCard m
     L.Cons x stack' → do
       state' ←
-        if x.cardId < cfg.pendingCardId
+        if maybe true (x.cardId < _) cfg.pendingCardId
           then pure $ Map.lookup x.cardId outputs
           else Just <$> runStep cfg state x
       let
@@ -615,12 +580,21 @@ stepRunCards cfg m @ { state, cards, stack, outputs } =
         , outputs: outputs'
         }
 
+  where
+    pushCard card m =
+      m { stack = L.Cons card m.stack }
+
+    pushNextActionCard =
+      if AT.isEditable cfg.accessType
+      then pushCard nextActionCard
+      else id
+
 evalRunCardsMachine
   ∷ RunCardsConfig
   → RunCardsMachine
   → DeckDSL RunCardsMachine
 evalRunCardsMachine cfg m =
-  if runCardsStateIsTerminal m
+  if runCardsStateIsTerminal cfg m
   then pure m
   else evalRunCardsMachine cfg =<< stepRunCards cfg m
 
@@ -664,16 +638,14 @@ runPendingCards ∷ DeckDSL Unit
 runPendingCards = do
   { modelCards, path, globalVarMap, stateMode, pendingCard, accessType } ← H.get
 
-  mresult ←
-    for pendingCard \pendingCardId → do
-      evalRunCardsMachine { pendingCardId, path, globalVarMap, accessType }
-        ∘ initialRunCardsState
-        $ L.toList modelCards
+  result ←
+    evalRunCardsMachine { pendingCardId: pendingCard, path, globalVarMap, accessType }
+      ∘ initialRunCardsState
+      $ L.toList modelCards
 
-  for_ mresult \result → do
-    H.modify $ DCS._displayCards .~ L.fromList (L.reverse result.cards)
-    state ← H.get
-    traverse_ (updateCard path globalVarMap) $ displayCardUpdates state result
+  H.modify $ DCS._displayCards .~ L.fromList (L.reverse result.cards)
+  state ← H.get
+  traverse_ (updateCard path globalVarMap) $ displayCardUpdates state result
 
   when (stateMode == Preparing) do
     lastIndex ← H.gets DCS.findLastRealCardIndex
@@ -681,7 +653,7 @@ runPendingCards = do
       $ (DCS._stateMode .~ Ready)
       ∘ (DCS._activeCardIndex .~ lastIndex)
 
-  updateIndicatorAndNextAction
+  updateActiveCardAndIndicator
   where
 
   updateCard
@@ -776,18 +748,13 @@ setModel ∷ Maybe DirPath → Maybe DeckId → Deck → DeckDSL Unit
 setModel dir deckId model = do
   st ← DCS.fromModel dir deckId model <$> H.get
   setDeckState st
-  maybe ready runCards
-    $ Array.uncons
-    $ _.cardId <$> st.modelCards
-  updateIndicatorAndNextAction
+  runCards $ _.cardId <$> st.modelCards
+  updateActiveCardAndIndicator
 
   where
-  ready =
-    H.modify $ DCS._stateMode .~ Ready
-
-  runCards { head, tail } = do
+  runCards cards = do
     H.modify
-      $ (DCS._cardsToLoad .~ Set.fromFoldable (Array.cons head tail))
+      $ (DCS._cardsToLoad .~ Set.fromFoldable cards)
       ∘ (DCS._stateMode .~ Preparing)
-      ∘ (DCS.addPendingCard head)
+      ∘ (fromMaybe id $ DCS.addPendingCard <$> Array.head cards)
     runPendingCards
