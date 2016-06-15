@@ -28,16 +28,14 @@ import Halogen as H
 import Halogen.HTML.Events.Indexed as HE
 import Halogen.HTML.Indexed as HH
 import Halogen.HTML.Properties.Indexed as HP
-import Halogen.Themes.Bootstrap3 as B
 
 import SlamData.Effects (Slam)
-import SlamData.Render.Common as RC
 import SlamData.Render.CSS as CSS
 import SlamData.Workspace.Card.Model as Card
 import SlamData.Workspace.Card.CardType as CT
 import SlamData.Workspace.Card.Component as NC
 import SlamData.Workspace.Card.Search.Component.Query (Query, SearchQuery(..))
-import SlamData.Workspace.Card.Search.Component.State (State, _running, _searchString, initialState)
+import SlamData.Workspace.Card.Search.Component.State (State, _searchString, initialState)
 
 type DSL = H.ComponentDSL State Query Slam
 type HTML = H.ComponentHTML Query
@@ -66,10 +64,7 @@ render state =
         [ HP.class_ (HH.className "sd-search-state-btn")
         , HE.onClick $ HE.input_ (UpdateSearch "" ⋙ right)
         ]
-        [ HH.img [ HP.src $ if state.running then "img/spin.gif" else "img/remove.svg" ] ]
-    , HH.button
-        [ HE.onClick $ HE.input_ (NC.NotifyRunCard ⋙ left) ]
-        [ RC.glyph B.glyphiconSearch ]
+        [ HH.img [ HP.src "img/remove.svg" ] ]
     ]
 
 eval ∷ Natural Query DSL
