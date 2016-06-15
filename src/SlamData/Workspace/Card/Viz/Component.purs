@@ -299,11 +299,6 @@ cardEval (EvalCard info output next) = do
     if null sample
       then H.modify (VCS._availableChartTypes .~ Set.empty)
       else H.modify (VCS._sample .~ analyzeJArray sample) *> configure
-
-  -- TODO: find a way to "bracket" the loading state like we did before. It is not
-  -- clear how to do this at the moment, since the actual activity of loading the
-  -- data takes place exterinallyin the model eval machinery. -js
-  H.modify $ VCS._loading .~ false
   pure next
 cardEval (NotifyRunCard next) = pure next
 cardEval (NotifyStopCard next) = pure next
