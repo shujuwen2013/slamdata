@@ -92,7 +92,7 @@ cardEval (Ec.EvalCard info output next ) = do
   pure next
 cardEval (Ec.NotifyRunCard next) = pure next
 cardEval (Ec.NotifyStopCard next) = pure next
-cardEval (Ec.Save k) = pure ∘ k $ Card.Save Nothing -- TODO: do we really need to fill this in? Looks like we didn't do anything before. -js
+cardEval (Ec.Save k) = pure (k Card.Download)
 cardEval (Ec.Load json next) = pure next
 cardEval (Ec.SetCanceler _ next) = pure next
 cardEval (Ec.SetDimensions dims next) = do
