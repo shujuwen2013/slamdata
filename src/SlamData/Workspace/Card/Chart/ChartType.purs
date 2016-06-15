@@ -55,8 +55,8 @@ printChartType Line = "line"
 printChartType Bar = "bar"
 
 derive instance genericChartType :: Generic ChartType
-instance eqChartType :: Eq ChartType where eq = gEq
-instance ordChartType :: Ord ChartType where compare = gCompare
+derive instance eqChartType :: Eq ChartType
+derive instance ordChartType :: Ord ChartType
 
 instance encodeJsonChartType :: EncodeJson ChartType where
   encodeJson = fromString <<< printChartType

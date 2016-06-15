@@ -86,8 +86,8 @@ aggregationSelect =
 
 
 derive instance genericAggregation ∷ Generic Aggregation
-instance eqAggregation ∷ Eq Aggregation where eq = gEq
-instance ordAggregation ∷ Ord Aggregation where compare = gCompare
+derive instance eqAggregation ∷ Eq Aggregation
+derive instance ordAggregation ∷ Ord Aggregation
 
 instance encodeJsonAggregation ∷ EncodeJson Aggregation where
   encodeJson = fromString <<< printAggregation

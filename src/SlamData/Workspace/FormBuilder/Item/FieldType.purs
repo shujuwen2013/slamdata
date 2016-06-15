@@ -49,7 +49,8 @@ data FieldType
   | SqlIdentifierFieldType
 
 derive instance genericFieldType ∷ Generic FieldType
-instance eqFieldType ∷ Eq FieldType where eq = gEq
+derive instance eqFieldType ∷ Eq FieldType
+derive instance ordFieldType ∷ Ord FieldType
 
 instance arbitraryFieldType ∷ SC.Arbitrary FieldType where
   arbitrary =
