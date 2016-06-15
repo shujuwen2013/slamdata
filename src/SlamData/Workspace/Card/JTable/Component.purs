@@ -80,7 +80,6 @@ runTable
 runTable =
   case _ of
     Port.TaggedResource trp → updateTable trp
-    Port.Blocked → lift $ resetState
     _ → throwError "Expected a TaggedResource input"
 
 updateTable
