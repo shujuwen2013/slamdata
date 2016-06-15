@@ -80,7 +80,6 @@ import SlamData.Workspace.Card.Viz.Component.Query as Viz
 -- |   current card's dependencies and updates the cards downwards from there.
 data CardQuery a
   = UpdateCard CardEvalInput (Maybe Port) a
-  | GetOutput (Maybe Port → a)
   | SaveCard CardId CardType (Card.Model → a)
   | LoadCard Card.Model a
   | SetCardAccessType Na.AccessType a
