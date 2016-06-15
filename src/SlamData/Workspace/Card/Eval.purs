@@ -33,27 +33,27 @@ import SlamData.FileSystem.Resource as R
 import SlamData.Effects (SlamDataEffects)
 import SlamData.Quasar.FS as QFS
 import SlamData.Quasar.Query as QQ
+import SlamData.Workspace.Card.API.Model as API
+import SlamData.Workspace.Card.DownloadOptions.Component.State as DO
 import SlamData.Workspace.Card.Eval.CardEvalT as CET
-import SlamData.Workspace.Card.Port as Port
+import SlamData.Workspace.Card.Markdown.Component.State.Core as MDS
 import SlamData.Workspace.Card.Markdown.Eval as MDE
 import SlamData.Workspace.Card.Markdown.Model as MD
-import SlamData.Workspace.Card.Markdown.Component.State.Core as MDS
+import SlamData.Workspace.Card.Port as Port
+import SlamData.Workspace.Card.Save.Eval as Save
 import SlamData.Workspace.Card.Search.Interpret as Search
-import SlamData.Workspace.Card.API.Model as API
-import SlamData.Workspace.Card.Viz.Model as Viz
 import SlamData.Workspace.Card.Viz.Eval as VizE
-import SlamData.Workspace.Card.DownloadOptions.Component.State as DO
+import SlamData.Workspace.Card.Viz.Model as Viz
 import SlamData.Workspace.FormBuilder.Item.Model as FBI
 
 import Text.SlamSearch as SS
 import Text.Markdown.SlamDown.Halogen.Component.State as SDH
-import Utils.Path as PathUtils
 
 data Eval
   = Pass
   | Query SQL
   | Search String
-  | Save String
+  | Save (Maybe String)
   | Error String
   | Markdown String
   | MarkdownForm MD.Model
@@ -108,7 +108,7 @@ evalCard input =
     Search query, Just (Port.TaggedResource { resource }) →
       Port.TaggedResource <$> evalSearch input query resource
     Save pathString, Just (Port.TaggedResource { resource }) →
-      Port.TaggedResource <$> evalSave input pathString resource
+      Port.TaggedResource <$> Save.eval input pathString resource
     OpenResource res, _ →
       Port.TaggedResource <$> evalOpenResource input res
     Viz model, _ →
@@ -223,35 +223,6 @@ evalSearch info queryText resource = do
       "Error making search temporary resource"
 
   pure { resource: outputResource, tag: pure sql }
-
-evalSave
-  ∷ ∀ m
-  . (Monad m, Affable SlamDataEffects m)
-  ⇒ CET.CardEvalInput
-  → String
-  → FilePath
-  → CET.CardEvalT m Port.TaggedResourcePort
-evalSave info pt resource =
-  case PathUtils.parseAnyPath pt of
-    Just (Right fp) → do
-
-      outputResource ← liftQ $
-        QQ.fileQuery resource fp "select * from {{path}}" SM.empty
-
-      liftQ $ QFS.messageIfFileNotFound
-        outputResource
-        "Error saving file, please try another location"
-
-      when (fp /= outputResource)
-        $ EC.throwError
-        $ "Resource: " ⊕ Path.printPath outputResource ⊕ " hasn't been modified"
-
-      -- WC.tell ["Resource successfully saved as: " ⊕ Path.printPath fp]
-      -- WC.tell ["Resource successfully saved as: " ⊕ Path.printPath fp]
-
-      pure { resource: outputResource, tag: Nothing }
-    _ →
-      EC.throwError $ pt ⊕ " is incorrect file path"
 
 liftQ ∷ ∀ m a. Monad m ⇒ m (Either Exn.Error a) → CET.CardEvalT m a
 liftQ = either (EC.throwError ∘ Exn.message) pure <=< lift

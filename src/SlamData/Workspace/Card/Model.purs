@@ -223,8 +223,7 @@ modelToEval =
     Ace CT.MarkdownMode model → pure $ Eval.Markdown model.text
     Markdown model → pure $ Eval.MarkdownForm model
     Search txt → pure $ Eval.Search txt
-    Save (Just str) → pure $ Eval.Save str
-    Save _ → Left "Save model missing string"
+    Save fp → pure $ Eval.Save fp
     OpenResource (Just res) → pure $ Eval.OpenResource res
     OpenResource _ → Left $ "OpenResource model missing resource"
     API model → pure $ Eval.API model

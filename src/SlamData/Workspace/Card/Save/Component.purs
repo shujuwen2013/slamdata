@@ -23,7 +23,7 @@ module SlamData.Workspace.Card.Save.Component
 
 import SlamData.Prelude
 
-import Data.Lens ((.~))
+import Data.Lens ((.~), (?~))
 import Data.Path.Pathy as Pt
 
 import Halogen as H
@@ -35,12 +35,15 @@ import Halogen.HTML.Events.Indexed as HE
 
 import SlamData.Effects (Slam)
 import SlamData.Render.CSS as Rc
+import SlamData.Workspace.Card.Port as Port
 import SlamData.Workspace.Card.Model as Card
 import SlamData.Workspace.Card.CardType as Ct
 import SlamData.Workspace.Card.Common.EvalQuery as Eq
 import SlamData.Workspace.Card.Component as Cc
 import SlamData.Workspace.Card.Save.Component.Query (Query(..), QueryP)
-import SlamData.Workspace.Card.Save.Component.State (State, initialState, _pathString)
+import SlamData.Workspace.Card.Save.Component.State (State, initialState, _pathString, _confirmedPath)
+
+import Utils.Path as PU
 
 type SaveHTML = H.ComponentHTML QueryP
 type SaveDSL = H.ComponentDSL State QueryP Slam
@@ -66,45 +69,53 @@ render state =
       HH.div [ HP.classes [ B.inputGroup, Rc.fileListField ] ]
         [ HH.input
             [ HP.classes [ B.formControl ]
-            , HP.value state.pathString
+            , HP.value $ fromMaybe "" state.pathString
             , ARIA.label "Output file destination"
             , HE.onValueInput $ HE.input \s → right ∘ UpdatePathString s
             ]
-        -- TODO: instate some method of confirming a location, require before unblocking next card
-        -- , HH.span
-        --     [ HP.classes [ B.inputGroupBtn, Rc.saveCardButton ] ]
-        --     [ HH.button
-        --       [ HP.classes [ B.btn, B.btnPrimary ]
-        --       , HP.buttonType HP.ButtonButton
-        --       , ARIA.label "Confirm saving file"
-        --       , HP.disabled $ isNothing $ Pt.parseAbsFile state.pathString
-        --       , HE.onClick (HE.input_ $ left ∘ Cc.NotifyRunCard)
-        --       ]
-        --       [ HH.text "Save" ]
-        --     ]
+        , HH.span
+            [ HP.classes [ B.inputGroupBtn, Rc.saveCardButton ] ]
+            [ HH.button
+              [ HP.classes [ B.btn, B.btnPrimary ]
+              , HP.buttonType HP.ButtonButton
+              , ARIA.label "Confirm saving file"
+              , HP.disabled $ isNothing $ PU.parseFilePath =<< state.pathString
+              , HE.onClick (HE.input_ $ right ∘ ConfirmPathString)
+              ]
+              [ HH.text "Save" ]
+            ]
         ]
     ]
 
-eval ∷ Natural QueryP SaveDSL
+eval ∷ QueryP ~> SaveDSL
 eval = coproduct cardEval saveEval
 
-cardEval ∷ Natural Eq.CardEvalQuery SaveDSL
-cardEval (Eq.EvalCard info output next) = pure next
-cardEval (Eq.Save k) = do
-  pt ← H.gets _.pathString
-  pure ∘ k ∘ Card.Save $ Pt.parseAbsFile pt $> pt
-cardEval (Eq.Load card next) = do
-  case card of
-    Card.Save s → H.modify $ _pathString .~ fromMaybe "" s
+cardEval ∷ Eq.CardEvalQuery ~> SaveDSL
+cardEval (Eq.EvalCard info output next) = do
+  for_ output case _ of
+    Port.TaggedResource { resource } →
+      H.modify
+        $ (_pathString ?~ Pt.printPath resource)
+        ∘ (_confirmedPath ?~ resource)
     _ → pure unit
   pure next
--- TODO: move something equivalent to this into EvalCard -gb
--- cardEval (Eq.SetupCard p next) = do
---   H.modify (_pathString .~ (Pt.printPath $ Eq.temporaryOutputResource p))
---   pure next
+cardEval (Eq.Save k) =
+  k ∘ Card.Save ∘ map Pt.printPath <$> H.gets _.confirmedPath
+cardEval (Eq.Load card next) = do
+  case card of
+    Card.Save s →
+      H.modify
+        $ (_pathString .~ s)
+        ∘ (_confirmedPath .~ (PU.parseFilePath =<< s))
+    _ → pure unit
+  pure next
 cardEval (Eq.SetCanceler _ next) = pure next
 cardEval (Eq.SetDimensions _ next) = pure next
 
-saveEval ∷ Natural Query SaveDSL
+saveEval ∷ Query ~> SaveDSL
 saveEval (UpdatePathString str next) =
-  H.modify (_pathString .~ str) $> next
+  H.modify (_pathString ?~ str) $> next
+saveEval (ConfirmPathString next) = do
+  pathString ← H.gets _.pathString
+  H.modify $ \st → st { confirmedPath = PU.parseFilePath =<< pathString }
+  pure next
