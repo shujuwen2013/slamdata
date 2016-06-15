@@ -70,17 +70,18 @@ render state =
             , ARIA.label "Output file destination"
             , HE.onValueInput $ HE.input \s → right ∘ UpdatePathString s
             ]
-        , HH.span
-            [ HP.classes [ B.inputGroupBtn, Rc.saveCardButton ] ]
-            [ HH.button
-              [ HP.classes [ B.btn, B.btnPrimary ]
-              , HP.buttonType HP.ButtonButton
-              , ARIA.label "Confirm saving file"
-              , HP.disabled $ isNothing $ Pt.parseAbsFile state.pathString
-              , HE.onClick (HE.input_ $ left ∘ Cc.NotifyRunCard)
-              ]
-              [ HH.text "Save" ]
-            ]
+        -- TODO: instate some method of confirming a location, require before unblocking next card
+        -- , HH.span
+        --     [ HP.classes [ B.inputGroupBtn, Rc.saveCardButton ] ]
+        --     [ HH.button
+        --       [ HP.classes [ B.btn, B.btnPrimary ]
+        --       , HP.buttonType HP.ButtonButton
+        --       , ARIA.label "Confirm saving file"
+        --       , HP.disabled $ isNothing $ Pt.parseAbsFile state.pathString
+        --       , HE.onClick (HE.input_ $ left ∘ Cc.NotifyRunCard)
+        --       ]
+        --       [ HH.text "Save" ]
+        --     ]
         ]
     ]
 
@@ -89,7 +90,6 @@ eval = coproduct cardEval saveEval
 
 cardEval ∷ Natural Eq.CardEvalQuery SaveDSL
 cardEval (Eq.EvalCard info output next) = pure next
-cardEval (Eq.NotifyRunCard next) = pure next
 cardEval (Eq.Save k) = do
   pt ← H.gets _.pathString
   pure ∘ k ∘ Card.Save $ Pt.parseAbsFile pt $> pt

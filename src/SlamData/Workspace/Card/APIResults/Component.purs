@@ -84,7 +84,6 @@ evalCard q =
       for (info.input >>= Lens.preview Port._VarMap) \varMap →
         H.modify (_ { varMap = varMap })
       pure next
-    NC.NotifyRunCard next -> pure next
     NC.Save k -> pure $ k Card.APIResults
     NC.Load _ next -> pure next
     NC.SetCanceler _ next -> pure next

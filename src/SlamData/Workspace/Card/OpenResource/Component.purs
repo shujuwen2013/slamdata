@@ -166,7 +166,6 @@ eval = cardEval ⨁ openResourceEval
 
 cardEval ∷ Eq.CardEvalQuery ~> DSL
 cardEval (Eq.EvalCard info output next) = pure next
-cardEval (Eq.NotifyRunCard next) = pure next
 cardEval (Eq.Save k) = do
   mbRes ← H.gets _.selected
   k ∘ Card.OpenResource <$>

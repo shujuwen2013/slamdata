@@ -75,8 +75,6 @@ cardEval q =
   case q of
     NC.EvalCard input output next →
       pure next
-    NC.NotifyRunCard next →
-      pure next
     NC.Save k → do
       input ← H.gets _.searchString
       pure ∘ k $ Card.Search input

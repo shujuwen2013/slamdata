@@ -287,7 +287,6 @@ cardEval (EvalCard info output next) = do
       then H.modify (VCS._availableChartTypes .~ Set.empty)
       else H.modify (VCS._sample .~ analyzeJArray sample) *> configure
   pure next
-cardEval (NotifyRunCard next) = pure next
 cardEval (Save k) = do
   st ← H.get
   config ← H.query st.chartType $ left $ H.request Form.GetConfiguration

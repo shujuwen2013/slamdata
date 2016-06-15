@@ -42,11 +42,8 @@ import SlamData.Workspace.Card.Model (AnyCardModel)
 -- |   card in the deck is provided, along with the output from the card's model
 -- |   evaluator. The card cannot return a new port value, it's eval is only
 -- |   allowed to update the card component state.
--- | - `NotifyRunCard` allows the card to notify the deck that it should be
--- |   run - the card cannot run itself directly.
 data CardEvalQuery a
   = EvalCard CardEvalInput (Maybe Port.Port) a
-  | NotifyRunCard a
   | SetCanceler (Canceler SlamDataEffects) a
   | Save (AnyCardModel → a)
   | Load AnyCardModel a

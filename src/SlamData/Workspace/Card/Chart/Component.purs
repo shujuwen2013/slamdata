@@ -117,7 +117,6 @@ render state =
   heightPadding = 80
 
 eval ∷ ECH.CardEvalQuery ~> ChartDSL
-eval (ECH.NotifyRunCard next) = pure next
 eval (ECH.EvalCard value output next) = do
   case value.input of
     Just (ChartOptions options) → do

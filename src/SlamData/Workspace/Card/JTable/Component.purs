@@ -57,7 +57,6 @@ jtableComponent =
 evalCard ∷ Natural CEQ.CardEvalQuery (H.ComponentDSL JTS.State QueryP Slam)
 evalCard =
   case _ of
-    CEQ.NotifyRunCard next → pure next
     CEQ.EvalCard info output next → do
       for_ info.input $ CEQ.runCardEvalT_ ∘ runTable
       pure next

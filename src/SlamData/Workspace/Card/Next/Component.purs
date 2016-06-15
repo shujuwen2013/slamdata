@@ -117,7 +117,6 @@ cardEval (Ec.EvalCard value output next) = do
     Just port →
       updatePort port
   pure next
-cardEval (Ec.NotifyRunCard next) = pure next
 cardEval (Ec.Save k) = pure $ k Card.NextAction
 cardEval (Ec.Load _ next) = pure next
 cardEval (Ec.SetCanceler _ next) = pure next
