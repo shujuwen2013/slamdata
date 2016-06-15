@@ -573,10 +573,14 @@ stepRunCards cfg m @ { state, cards, stack, outputs } =
       let
         cards' = L.Cons x cards
         outputs' = maybe id (Map.insert x.cardId) state' outputs
+        stack'' =
+          case state' of
+            Just (Port.CardError _) → L.Nil
+            _ → stack'
       pure
         { state: state'
         , cards: cards'
-        , stack: stack'
+        , stack: stack''
         , outputs: outputs'
         }
 
