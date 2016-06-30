@@ -226,14 +226,12 @@ provideSearchStringInLastSearchCard =
 provideMdInLastMdCard ∷ String → SlamFeature Unit
 provideMdInLastMdCard =
   Feature.provideFieldValue
-    $ XPath.last $ XPath.anywhere XPaths.mdCardTitle
-    `XPath.following` XPaths.aceEditor
+    $ XPath.last $ XPath.anywhere XPaths.aceEditor
 
 provideQueryInLastQueryCard ∷ String → SlamFeature Unit
 provideQueryInLastQueryCard =
   Feature.provideFieldValue
-    $ (XPath.last $ XPath.anywhere $ XPaths.queryCardTitle)
-    `XPath.following` XPaths.aceEditor
+    $ XPath.last $ XPath.anywhere XPaths.aceEditor
 
 provideSaveDestinationInLastCacheCard ∷ String → SlamFeature Unit
 provideSaveDestinationInLastCacheCard =
@@ -275,6 +273,9 @@ selectFromDropdownInLastDeck labelText =
 
 accessSharingUrl ∷ SlamFeature Unit
 accessSharingUrl = Feature.accessUrlFromFieldValue $ XPath.anywhere XPaths.sharingUrl
+
+accessPublishingUrl ∷ SlamFeature Unit
+accessPublishingUrl = Feature.accessUrlFromFieldValue $ XPath.anywhere XPaths.publishingUrl
 
 downloadFileAsCSV ∷ String → SlamFeature Unit
 downloadFileAsCSV fileName = do
@@ -372,3 +373,7 @@ publishDeck =
 filterActions ∷ String → SlamFeature Unit
 filterActions =
   Feature.provideFieldValue (XPath.anywhere $ XPath.anyWithExactAriaLabel "Filter actions")
+
+confirmDeckAction ∷ SlamFeature Unit
+confirmDeckAction =
+  Feature.click $ XPath.anywhere $ XPath.anyWithExactText "Confirm"
