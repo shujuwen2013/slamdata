@@ -177,14 +177,14 @@ buildArea axises angle size stacked smooth conf = case preSeries of
     EC.Legend EC.legendDefault
       { "data" = Just $ map EC.legendItemDefault $ extractNames ss
       , textStyle = Just $ EC.TextStyle EC.textStyleDefault
-          { fontFamily = Just "Palatino, Georgia, serif" }
+          { fontFamily = Just "Ubuntu" }
       }
 
   tooltip ∷ EC.Tooltip
   tooltip = EC.Tooltip $ EC.tooltipDefault 
     { trigger = Just EC.TriggerAxis
     , textStyle = Just $ EC.TextStyle EC.textStyleDefault 
-        { fontFamily = Just "Palatino, Georgia, serif"
+        { fontFamily = Just "Ubuntu"
         , fontSize = Just 12.0 
         }
     , axisPointer = Just $ EC.TooltipAxisPointer EC.tooltipAxisPointerDefault 
@@ -231,7 +231,7 @@ buildArea axises angle size stacked smooth conf = case preSeries of
       { "type" = Just EC.ValueAxis
       , axisLabel = Just $ EC.AxisLabel EC.axisLabelDefault
         { textStyle = Just $ EC.TextStyle EC.textStyleDefault
-          { fontFamily = Just "Palatino, Georgia, serif"
+          { fontFamily = Just "Ubuntu"
           , fontSize = Just $ Int.toNumber size
           }
         }
