@@ -16,7 +16,7 @@ limitations under the License.
 
 module SlamData.Workspace.Card.Chart.ChartOptions.Common where
 
-import SlamData.Prelude (Maybe(Just, Nothing), Tuple(Tuple), ($), (∘), fromMaybe, foldl, (<$>), map, (==), lmap, pure, zero, join, (<>), maybe, (>>=), snd, fst, flip, (>=>), bind, show)
+import SlamData.Prelude
 
 import Data.Argonaut (JCursor)
 import Data.Array (catMaybes, cons, (!!))
