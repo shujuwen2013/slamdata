@@ -317,6 +317,9 @@ barChartIcon = className "bar-chart-icon"
 lineChartIcon ∷ ClassName
 lineChartIcon = className "line-chart-icon"
 
+areaChartIcon ∷ ClassName
+areaChartIcon = className "area-chart-icon"
+
 deleteDeckIcon ∷ ClassName
 deleteDeckIcon = className "delete-deck-icon"
 
@@ -337,6 +340,9 @@ axisLabelParam = className "axis-label-param"
 
 chartSizeParam ∷ ClassName
 chartSizeParam = className "chart-size-param"
+
+chartDetailParam ∷ ClassName
+chartDetailParam = className "chart-detail-param"
 
 downloadCardEditor ∷ ClassName
 downloadCardEditor = className "download-card-editor"
