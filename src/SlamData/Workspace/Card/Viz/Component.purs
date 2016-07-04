@@ -51,7 +51,7 @@ import SlamData.Workspace.Card.Chart.Aggregation (aggregationSelect)
 import SlamData.Workspace.Card.Chart.Axis (analyzeJArray, Axis)
 import SlamData.Workspace.Card.Chart.Axis as Ax
 import SlamData.Workspace.Card.Chart.ChartConfiguration (ChartConfiguration, depends, dependsOnArr)
-import SlamData.Workspace.Card.Chart.ChartType (ChartType(..), isPie)
+import SlamData.Workspace.Card.Chart.ChartType (ChartType(..), isPie, isArea)
 import SlamData.Workspace.Card.Component as CC
 import SlamData.Workspace.Card.Model as Card
 import SlamData.Workspace.Card.Port as P
@@ -192,12 +192,13 @@ renderChartTypeSelector state =
   src Pie = "img/pie.svg"
   src Line = "img/line.svg"
   src Bar = "img/bar.svg"
+  src Area = "img/area.svg"
 
   cls ∷ ChartType → HH.ClassName
   cls Pie = Rc.pieChartIcon
   cls Line = Rc.lineChartIcon
   cls Bar = Rc.barChartIcon
-
+  cls Area = Rc.areaChartIcon
 
 renderChartConfiguration ∷ VCS.State → VizHTML
 renderChartConfiguration state =
@@ -206,6 +207,7 @@ renderChartConfiguration state =
     [ renderTab Pie
     , renderTab Line
     , renderTab Bar
+    , renderTab Area
     , renderDimensions state
     ]
   where
@@ -225,19 +227,23 @@ renderChartConfiguration state =
 renderDimensions ∷ VCS.State → VizHTML
 renderDimensions state =
   row
-  [ chartInput Rc.axisLabelParam "Axis label angle"
+  [ intChartInput Rc.axisLabelParam "Axis label angle"
       (_.axisLabelAngle ⋙ show) RotateAxisLabel (isPie state.chartType)
-  , chartInput Rc.axisLabelParam "Axis font size"
+  , intChartInput Rc.axisLabelParam "Axis font size"
       (_.axisLabelFontSize ⋙ show) SetAxisFontSize (isPie state.chartType)
+  , boolChartInput Rc.chartDetailParam "If stack"
+      (_.areaStacked ⋙ show) SetStacked (not $ isArea state.chartType)
+  , boolChartInput Rc.chartDetailParam "If smooth"
+      (_.smooth ⋙ show) SetSmooth (not $ isArea state.chartType)
   ]
   where
-  chartInput
+  intChartInput
     ∷ HH.ClassName
     → String
     → (VCS.State → String)
     → (Int → Unit → Query Unit)
     → Boolean → VizHTML
-  chartInput cls labelText valueFromState queryCtor isHidden =
+  intChartInput cls labelText valueFromState queryCtor isHidden =
     HH.form
       [ HP.classes
           $ [ B.colXs6, cls ]
@@ -253,6 +259,29 @@ renderDimensions state =
               $ pure ∘ map (right ∘ flip queryCtor unit) ∘ stringToInt
           ]
       ]
+  
+  boolChartInput
+    ∷ HH.ClassName
+    → String
+    → (VCS.State → String)
+    → (Boolean → Unit → Query Unit)
+    → Boolean → VizHTML
+  boolChartInput cls labelText valueFromState queryCtor isHidden =
+    HH.form
+      [ HP.classes
+          $ [ B.colXs6, cls ]
+          ⊕ (guard isHidden $> B.hide)
+      , Cp.nonSubmit
+      ]
+      [ label labelText
+      , HH.input
+          [ HP.classes [ B.formControl ]
+          , HP.value $ valueFromState state
+          , ARIA.label labelText
+          , HE.onValueChange
+              $ pure ∘ map (right ∘ flip queryCtor unit) ∘ stringToBool
+          ]
+      ]
 
   label ∷ String → VizHTML
   label str = HH.label [ HP.classes [ B.controlLabel ] ] [ HH.text str ]
@@ -262,6 +291,10 @@ renderDimensions state =
 
   stringToInt ∷ String → Maybe Int
   stringToInt s = if s ≡ "" then Just 0 else Int.fromString s
+
+  stringToBool ∷ String → Maybe Boolean
+  stringToBool s = if s ≡ "true" || s ≡ "True" || s ≡ "t" || s ≡ "T" || s ≡ "1" then Just true 
+                      else Just false
 
 -- Note: need to put running to state
 eval ∷ QueryC ~> VizDSL
@@ -273,6 +306,8 @@ vizEval q = do
     SetChartType ct n → H.modify (VCS._chartType .~ ct) $> n
     RotateAxisLabel angle n → H.modify (VCS._axisLabelAngle .~ angle) $> n
     SetAxisFontSize size n → H.modify (VCS._axisLabelFontSize .~ size) $> n
+    SetStacked stacked n → H.modify (VCS._areaStacked .~ stacked) $> n
+    SetSmooth smooth n → H.modify (VCS._smooth .~ smooth) $> n
   configure
   CC.raiseUpdatedP' CC.EvalModelUpdate
   pure next
@@ -296,6 +331,8 @@ cardEval = case _ of
           { chartType: st.chartType
           , axisLabelFontSize: st.axisLabelFontSize
           , axisLabelAngle: st.axisLabelAngle
+          , areaStacked: st.areaStacked
+          , smooth: st.smooth
           }
       }
   CC.Load card next → do
@@ -336,6 +373,8 @@ configure = void do
   setConfFor Line $ lineConfiguration axises lineConf
   barConf ← getOrInitial Bar
   setConfFor Bar $ pieBarConfiguration axises barConf
+  areaConf ← getOrInitial Area
+  setConfFor Area $ areaConfiguration axises areaConf
   let chartTypes = available axises
   H.modify (VCS._availableChartTypes .~ available axises)
   case Set.toList chartTypes of
@@ -358,7 +397,7 @@ configure = void do
     $ if null axises.value
       then []
       else if not $ null axises.category
-           then [Pie, Bar, Line]
+           then [Pie, Bar, Line, Area]
            else if (null axises.time) && (length axises.value < 2)
                 then []
                 else [Line]
@@ -407,6 +446,41 @@ configure = void do
 
   lineConfiguration ∷ AxisAccum → ChartConfiguration → ChartConfiguration
   lineConfiguration axises current =
+    let allAxises = (axises.category ⊕ axises.time ⊕ axises.value)
+        dimensions =
+          setPreviousValueFrom (index current.dimensions 0)
+          $ autoSelect $ newSelect $ dependsOnArr axises.value
+          -- This is redundant, I've put it here to notify
+          -- that this behaviour differs from pieBar and can be changed.
+          $ allAxises
+        firstMeasures =
+          setPreviousValueFrom (index current.measures 0)
+          $ autoSelect $ newSelect $ depends dimensions
+          $ axises.value ⊝ dimensions
+        secondMeasures =
+          setPreviousValueFrom (index current.measures 1)
+          $ newSelect $ ifSelected [firstMeasures]
+          $ depends dimensions
+          $ axises.value ⊝ firstMeasures ⊝ dimensions
+        firstSeries =
+          setPreviousValueFrom (index current.series 0)
+          $ newSelect $ ifSelected [dimensions] $ allAxises ⊝ dimensions
+        secondSeries =
+          setPreviousValueFrom (index current.series 1)
+          $ newSelect $ ifSelected [dimensions, firstSeries]
+          $ allAxises ⊝ dimensions ⊝ firstSeries
+        firstAggregation =
+          setPreviousValueFrom (index current.aggregations 0) aggregationSelect
+        secondAggregation =
+          setPreviousValueFrom (index current.aggregations 1) aggregationSelect
+    in { series: [firstSeries, secondSeries]
+       , dimensions: [dimensions]
+       , measures: [firstMeasures, secondMeasures]
+       , aggregations: [firstAggregation, secondAggregation]
+       }
+
+  areaConfiguration ∷ AxisAccum → ChartConfiguration → ChartConfiguration
+  areaConfiguration axises current =
     let allAxises = (axises.category ⊕ axises.time ⊕ axises.value)
         dimensions =
           setPreviousValueFrom (index current.dimensions 0)
