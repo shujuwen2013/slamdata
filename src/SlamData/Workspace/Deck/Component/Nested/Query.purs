@@ -14,15 +14,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -}
 
-module SlamData.FileSystem.Dialog.Permissions.Component.Query where
+module SlamData.Workspace.Deck.Component.Nested.Query
+  ( Query(..)
+  , QueryP
+  ) where
 
 import SlamData.Prelude
 import DOM.HTML.Types (HTMLElement)
+import SlamData.Workspace.Deck.Component.Query as DCQ
 
 data Query a
   = Init a
-  | ToConfirm a
-  | BackToForm a
-  | Share a
-  | Dismiss a
-  | InitZClipboard (Maybe HTMLElement) a
+  | Finish a
+  | Ref (Maybe HTMLElement) a
+
+type QueryP = Coproduct Query DCQ.Query

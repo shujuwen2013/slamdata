@@ -570,7 +570,20 @@ button {
     }
 }
 
+.noselect {
+  -webkit-touch-callout: none; /* iOS Safari */
+  -webkit-user-select: none;   /* Chrome/Safari/Opera */
+  -khtml-user-select: none;    /* Konqueror */
+  -moz-user-select: none;      /* Firefox */
+  -ms-user-select: none;       /* Internet Explorer/Edge */
+  user-select: none;           /* Non-prefixed version, currently
+                                  not supported by any browser */
+  -webkit-user-drag: none;   /* bonus for webkit, prevents things being dragged */
+}
 
+button {
+  .noselect;
+}
 
 
 @import "bootstrap-overloads";
@@ -583,6 +596,5 @@ button {
 @import "dialog/embed";
 @import "dialog/download";
 @import "form-builder";
-@import "share-permissions";
 @import "deck";
 @import "form";

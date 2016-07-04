@@ -20,9 +20,8 @@ import SlamData.Prelude
 
 import Halogen as H
 import SlamData.Effects (Slam)
-import SlamData.Workspace.Deck.Component.Query (QueryP)
+import SlamData.Workspace.Deck.Component.Nested.Query (QueryP)
+import SlamData.Workspace.Deck.Component.Nested.State (State)
 import SlamData.Workspace.Deck.Component.State (StateP)
 
-type DeckComponent = H.Component StateP QueryP Slam
-
-type DeckThunk = Unit → { component ∷ DeckComponent, initialState ∷ StateP }
+type DeckComponent = StateP → H.Component State QueryP Slam
