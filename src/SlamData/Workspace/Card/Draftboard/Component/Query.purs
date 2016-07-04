@@ -21,12 +21,11 @@ import SlamData.Prelude
 import DOM.HTML.Types (HTMLElement)
 
 import Halogen as H
-import Halogen.Component.Opaque.Unsafe (OpaqueQuery)
 import Halogen.Component.Utils.Drag (DragEvent)
 import Halogen.HTML.Events.Types (Event, MouseEvent)
 
 import SlamData.Workspace.Card.Common.EvalQuery (CardEvalQuery)
-import SlamData.Workspace.Deck.Component.Query as DCQ
+import SlamData.Workspace.Deck.Component.Nested.Query as DNQ
 import SlamData.Workspace.Deck.DeckId (DeckId)
 
 data Query a
@@ -38,4 +37,4 @@ data Query a
 
 type QueryC = Coproduct CardEvalQuery Query
 
-type QueryP = H.ParentQuery QueryC (OpaqueQuery DCQ.Query) DeckId
+type QueryP = H.ParentQuery QueryC DNQ.QueryP DeckId

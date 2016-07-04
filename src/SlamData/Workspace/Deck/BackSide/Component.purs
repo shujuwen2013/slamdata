@@ -17,24 +17,30 @@ limitations under the License.
 module SlamData.Workspace.Deck.BackSide.Component where
 
 import SlamData.Prelude
+
 import Data.Array as Arr
 import Data.Foldable as F
 import Data.String as Str
+
 import Halogen as H
 import Halogen.HTML.Events.Indexed as HE
 import Halogen.HTML.Indexed as HH
 import Halogen.HTML.Properties.Indexed as HP
 import Halogen.HTML.Properties.Indexed.ARIA as ARIA
 import Halogen.Themes.Bootstrap3 as B
-import SlamData.Render.CSS as Rc
-import SlamData.Workspace.Card.CardType as CT
+
 import SlamData.Effects (Slam)
 import SlamData.Render.Common (glyph)
+import SlamData.Render.CSS as Rc
+import SlamData.Workspace.Card.CardType as CT
+import SlamData.Workspace.Card.Component.CSS as CCSS
+import SlamData.Quasar.Auth (retrieveIdToken)
 
 data Query a
   = UpdateFilter String a
   | DoAction BackAction a
   | UpdateCardType (Maybe CT.CardType) a
+  | Init a
 
 data BackAction
   = Trash
@@ -45,24 +51,32 @@ data BackAction
   | DeleteDeck
   | Mirror
   | Wrap
+  | Share
+  | Unshare
 
 
-allBackActions ∷ Array BackAction
-allBackActions =
+allBackActions ∷ State → Array BackAction
+allBackActions state =
   [ Trash
   , Rename
-  , Share
-  , Embed
-  , Publish
-  , DeleteDeck
-  , Mirror
-  , Wrap
   ]
+  ⊕ (if state.isLogged
+      then [ Share
+           , Unshare
+           ]
+      else [ ])
+  ⊕ [ Embed
+    , Publish
+    , DeleteDeck
+    , Mirror
+    , Wrap
+    ]
 
 type State =
   { filterString ∷ String
   , cardType ∷ Maybe CT.CardType
   , saved ∷ Boolean
+  , isLogged ∷ Boolean
   }
 
 initialState ∷ State
@@ -70,6 +84,7 @@ initialState =
   { filterString: ""
   , cardType: Nothing
   , saved: false
+  , isLogged: false
   }
 
 
@@ -83,6 +98,7 @@ labelAction action = case action of
   DeleteDeck → "Delete deck"
   Mirror → "Mirror"
   Wrap → "Wrap"
+  Unshare → "Unshare deck"
 
 keywordsAction ∷ BackAction → Array String
 keywordsAction Trash = ["remove", "delete", "trash"]
@@ -93,6 +109,7 @@ keywordsAction Publish = ["publish", "presentation", "view"]
 keywordsAction DeleteDeck = ["remove", "delete", "trash"]
 keywordsAction Mirror = ["mirror", "copy", "duplicate", "shallow"]
 keywordsAction Wrap = ["wrap", "pin", "card"]
+keywordsAction Unshare = ["unshare", "manage"]
 
 actionEnabled ∷ State → BackAction → Boolean
 actionEnabled st a =
@@ -107,6 +124,7 @@ actionGlyph = case _ of
   Trash → glyph B.glyphiconTrash
   Rename → glyph B.glyphiconPencil
   Share → glyph B.glyphiconShare
+  Unshare → glyph B.glyphiconWrench
   Embed → glyph B.glyphiconShareAlt
   Publish → glyph B.glyphiconBlackboard
   Mirror → glyph B.glyphiconDuplicate
@@ -117,12 +135,18 @@ type HTML = H.ComponentHTML Query
 type DSL = H.ComponentDSL State Query Slam
 
 comp ∷ H.Component State Query Slam
-comp = H.component {render, eval}
+comp =
+  H.lifecycleComponent
+    { render
+    , eval
+    , finalizer: Nothing
+    , initializer: Just (H.action Init)
+    }
 
 render ∷ State → HTML
 render state =
   HH.div
-    [ HP.class_ Rc.deckCard ]
+    [ HP.class_ CCSS.deckCard ]
     [ HH.div
         [ HP.class_ Rc.deckBackSide ]
         [ HH.div_
@@ -156,7 +180,7 @@ render state =
            else { enabledActions, disabledActions: Arr.snoc disabledActions action }
       )
       {enabledActions: [], disabledActions: []}
-      allBackActions
+      (allBackActions state)
 
   backActionConforms ∷ BackAction → Boolean
   backActionConforms ba =
@@ -190,3 +214,6 @@ eval (UpdateFilter str next) =
   H.modify (_ { filterString = str }) $> next
 eval (UpdateCardType cty next) =
   H.modify (_ { cardType = cty }) $> next
+eval (Init next) = next <$ do
+  isLogged ← map isJust $ H.fromEff retrieveIdToken
+  H.modify (_ { isLogged = isLogged })

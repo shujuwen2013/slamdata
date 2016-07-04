@@ -27,26 +27,11 @@ deckBackSide = className "sd-deck-backside"
 loading ∷ ClassName
 loading = className "loading"
 
-cardSlider :: ClassName
-cardSlider = className "sd-card-slider"
-
-board :: ClassName
-board = className "sd-board"
-
-deck :: ClassName
-deck = className "sd-deck"
-
-card :: ClassName
-card = className "sd-card"
-
 cardGripper :: ClassName
 cardGripper = className "sd-card-gripper"
 
 cardGripperLast :: ClassName
 cardGripperLast = className "sd-card-gripper-last"
-
-flipDeck :: ClassName
-flipDeck = className "sd-flip-deck"
 
 form ∷ ClassName
 form = className "sd-form"

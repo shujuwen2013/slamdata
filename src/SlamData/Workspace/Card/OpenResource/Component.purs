@@ -40,6 +40,7 @@ import SlamData.Quasar.FS as Quasar
 import SlamData.Render.Common (glyph)
 import SlamData.Render.CSS as RC
 import SlamData.Workspace.Card.CardType as CT
+import SlamData.Workspace.Card.Common.Render (renderLowLOD)
 import SlamData.Workspace.Card.Component as CC
 import SlamData.Workspace.Card.Model as Card
 import SlamData.Workspace.Card.OpenResource.Component.Query (QueryP, Query(..))
@@ -68,27 +69,8 @@ render ∷ State → HTML
 render state =
   HH.div_
     [ renderHighLOD state
-    , renderLowLOD state
+    , renderLowLOD B.glyphiconFolderOpen left state.levelOfDetails
     ]
-
-
-renderLowLOD ∷ State → HTML
-renderLowLOD state =
-  HH.div
-    [ HP.classes
-        $ (B.hidden <$ guard (state.levelOfDetails ≠ Low))
-        ⊕ [ HH.className "card-input-minimum-lod" ]
-    ]
-    [ HH.button
-        [ ARIA.label "Zoom or resize"
-        , HP.title "Zoom or resize"
-        , HE.onClick (HE.input_ (left ∘ CC.ZoomIn))
-        ]
-        [ glyph B.glyphiconFolderOpen
-        , HH.text "Zoom or resize"
-        ]
-    ]
-
 
 renderHighLOD ∷ State → HTML
 renderHighLOD state =
@@ -198,6 +180,7 @@ cardEval = case _ of
 openResourceEval ∷ Query ~> DSL
 openResourceEval (ResourceSelected r next) = do
   resourceSelected r
+  CC.raiseUpdatedC' CC.EvalModelUpdate
   pure next
 openResourceEval (Init mres next) = do
   updateItems *> rearrangeItems
@@ -214,7 +197,6 @@ resourceSelected r = do
           H.modify (_browsing .~ dp)
           updateItems
       H.modify (_selected ?~ fp)
-      CC.raiseUpdatedC' CC.EvalModelUpdate
     Left dp → do
       H.modify
         $ (_browsing .~ dp)
@@ -224,8 +206,7 @@ resourceSelected r = do
 
 updateItems ∷ DSL Unit
 updateItems = do
-  dp ← H.gets _.browsing
-  cs ← Quasar.children dp
+  cs ← Quasar.children =<< H.gets _.browsing
   mbSel ← H.gets _.selected
   H.modify (_items .~ foldMap id cs)
 
@@ -234,7 +215,8 @@ rearrangeItems = do
   H.modify $ _items %~ Arr.sortBy sortFn
   where
   sortFn ∷ R.Resource → R.Resource → Ordering
-  sortFn a b | R.hiddenTopLevel a && R.hiddenTopLevel b = compare a b
-  sortFn a b | R.hiddenTopLevel a = GT
-  sortFn a b | R.hiddenTopLevel b = LT
-  sortFn a b = compare a b
+  sortFn a b
+    | R.hiddenTopLevel a && R.hiddenTopLevel b = compare a b
+    | R.hiddenTopLevel a = GT
+    | R.hiddenTopLevel b = LT
+    | otherwise = compare a b

@@ -23,7 +23,6 @@ module SlamData.Workspace.Deck.Component.State
   , _id
   , _name
   , _parent
-  , _accessType
   , _modelCards
   , _displayCards
   , _activeCardIndex
@@ -69,6 +68,8 @@ import SlamData.Prelude
 
 import Control.Monad.Aff.EventLoop (Breaker)
 
+import DOM.HTML.Types (HTMLElement)
+
 import Data.Array as A
 import Data.Foldable (maximum)
 import Data.Lens (LensP, lens)
@@ -83,7 +84,6 @@ import Halogen.Component.Opaque.Unsafe (OpaqueState)
 import Halogen.Component.Utils.Debounced (DebounceTrigger)
 
 import SlamData.Effects (Slam)
-import SlamData.Workspace.AccessType (AccessType(..))
 
 import SlamData.Workspace.Card.CardId (CardId(..))
 import SlamData.Workspace.Card.CardId as CID
@@ -115,7 +115,6 @@ type State =
   , name ∷ String
   , parent ∷ Maybe (DeckId × CardId)
   , fresh ∷ Int
-  , accessType ∷ AccessType
   , modelCards ∷ Array (DeckId × Card.Model)
   , displayCards ∷ Array (DeckId × Card.Model)
   , cardsToLoad ∷ Set.Set (DeckId × CardId)
@@ -136,6 +135,8 @@ type State =
   , slidingTo ∷ Maybe GripperDef
   , breakers ∷ Array (Breaker Unit)
   , focused ∷ Boolean
+  , finalized ∷ Boolean
+  , deckElement ∷ Maybe HTMLElement
   }
 
 -- | A record used to represent card definitions in the deck.
@@ -148,7 +149,6 @@ initialDeck path deckId =
   , name: ""
   , parent: Nothing
   , fresh: 0
-  , accessType: Editable
   , modelCards: mempty
   , displayCards: mempty
   , cardsToLoad: mempty
@@ -169,6 +169,8 @@ initialDeck path deckId =
   , slidingTo: Nothing
   , breakers: mempty
   , focused: false
+  , finalized: false
+  , deckElement: Nothing
   }
 
 -- | The unique identifier of the deck.
@@ -187,10 +189,6 @@ _parent = lens _.parent _{parent = _}
 -- | A counter used to generate `CardId` values. This should be a monotonically increasing value
 _fresh ∷ ∀ a r. LensP {fresh ∷ a|r} a
 _fresh = lens _.fresh _{fresh = _}
-
--- | Determines whether the deck is editable.
-_accessType ∷ ∀ a r. LensP {accessType ∷ a|r} a
-_accessType = lens _.accessType _{accessType = _}
 
 -- | The list of cards currently in the deck.
 _modelCards ∷ ∀ a r. LensP {modelCards ∷ a |r} a
