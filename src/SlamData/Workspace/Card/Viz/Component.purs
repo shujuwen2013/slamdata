@@ -51,12 +51,8 @@ import SlamData.Workspace.Card.Chart.Aggregation (aggregationSelect)
 import SlamData.Workspace.Card.Chart.Axis (analyzeJArray, Axis)
 import SlamData.Workspace.Card.Chart.Axis as Ax
 import SlamData.Workspace.Card.Chart.ChartConfiguration (ChartConfiguration, depends, dependsOnArr)
-<<<<<<< HEAD
 import SlamData.Workspace.Card.Chart.ChartType (ChartType(..), isPie, isArea)
-=======
-import SlamData.Workspace.Card.Chart.ChartType (ChartType(..), isPie)
 import SlamData.Workspace.Card.Common.Render (renderLowLOD)
->>>>>>> slamdata/master
 import SlamData.Workspace.Card.Component as CC
 import SlamData.Workspace.Card.Model as Card
 import SlamData.Workspace.Card.Port as P
