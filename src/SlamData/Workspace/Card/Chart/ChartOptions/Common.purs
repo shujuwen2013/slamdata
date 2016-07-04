@@ -16,7 +16,7 @@ limitations under the License.
 
 module SlamData.Workspace.Card.Chart.ChartOptions.Common where
 
-import SlamData.Prelude
+import SlamData.Prelude (Maybe(Just, Nothing), Tuple(Tuple), ($), (∘), fromMaybe, foldl, (<$>), map, (==), lmap, pure, zero, join, (<>), maybe, (>>=), snd, fst, flip, (>=>), bind, show)
 
 import Data.Argonaut (JCursor)
 import Data.Array (catMaybes, cons, (!!))
@@ -28,7 +28,7 @@ import Data.List as L
 import Data.Map (Map)
 import Data.Map as M
 
-import Color
+import Color (Color, toRGBA, fromHexString, hsla, toHSLA)
 
 import ECharts (AxisRec, AxisLabel(..), TextStyle(..), textStyleDefault, axisLabelDefault)
 
