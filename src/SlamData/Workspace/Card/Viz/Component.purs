@@ -259,12 +259,11 @@ renderDimensions state =
       ]
       [ label labelText
       , HH.input
-          [ HP.inputType HP.InputCheckbox
-          , HP.checked $ stringToBool $ valueFromState state
-          , HP.checked true
+          [ HP.classes [ B.formControl ]
+          , HP.value $ valueFromState state
           , ARIA.label labelText
-          , HE.onChecked
-              $ pure ∘ map (right ∘ flip queryCtor unit) ∘ boolToBool
+          , HE.onValueChange
+              $ pure ∘ map (right ∘ flip queryCtor unit) ∘ stringToBool
           ]
       ]
 
@@ -277,12 +276,9 @@ renderDimensions state =
   stringToInt ∷ String → Maybe Int
   stringToInt s = if s ≡ "" then Just 0 else Int.fromString s
 
-  boolToBool ∷ Boolean → Maybe Boolean
-  boolToBool s = Just s
-
-  stringToBool ∷ String → Boolean
-  stringToBool s = if s ≡ "true" then true 
-                   else false
+  stringToBool ∷ String → Maybe Boolean
+  stringToBool s = if s ≡ "true" || s ≡ "True" || s ≡ "t" || s ≡ "T" || s ≡ "1" then Just true 
+                      else Just false
 
 -- Note: need to put running to state
 eval ∷ QueryC ~> VizDSL
