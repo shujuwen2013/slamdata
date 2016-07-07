@@ -186,12 +186,15 @@ renderChartTypeSelector state =
 
 <<<<<<< Updated upstream
 
+<<<<<<< HEAD:src/SlamData/Workspace/Card/ChartOptions/Component.purs
 =======
 <<<<<<< HEAD:src/SlamData/Workspace/Card/ChartOptions/Component.purs
 =======
 
 >>>>>>> slamdata/master:src/SlamData/Workspace/Card/ChartOptions/Component.purs
 >>>>>>> Stashed changes
+=======
+>>>>>>> slamdata/master:src/SlamData/Workspace/Card/ChartOptions/Component.purs
 renderChartConfiguration ∷ VCS.State → HTML
 renderChartConfiguration state =
   HH.div
@@ -235,12 +238,15 @@ renderDimensions state =
     → (VCS.State → String)
     → (Int → Unit → Query Unit)
     → Boolean → HTML
+<<<<<<< HEAD:src/SlamData/Workspace/Card/ChartOptions/Component.purs
 <<<<<<< Updated upstream
   chartInput cls labelText valueFromState queryCtor isHidden =
 =======
 <<<<<<< HEAD:src/SlamData/Workspace/Card/ChartOptions/Component.purs
   intChartInput cls labelText valueFromState queryCtor isHidden =
 =======
+=======
+>>>>>>> slamdata/master:src/SlamData/Workspace/Card/ChartOptions/Component.purs
   chartInput cls labelText valueFromState queryCtor isHidden =
 >>>>>>> slamdata/master:src/SlamData/Workspace/Card/ChartOptions/Component.purs
 >>>>>>> Stashed changes
@@ -476,6 +482,7 @@ configure = void do
        }
 
 <<<<<<< HEAD:src/SlamData/Workspace/Card/ChartOptions/Component.purs
+<<<<<<< HEAD:src/SlamData/Workspace/Card/ChartOptions/Component.purs
   areaConfiguration ∷ AxisAccum → ChartConfiguration → ChartConfiguration
   areaConfiguration axises current =
     let allAxises = (axises.category ⊕ axises.time ⊕ axises.value)
@@ -511,6 +518,8 @@ configure = void do
        , aggregations: [firstAggregation, secondAggregation]
        }
 
+=======
+>>>>>>> slamdata/master:src/SlamData/Workspace/Card/ChartOptions/Component.purs
 =======
 >>>>>>> slamdata/master:src/SlamData/Workspace/Card/ChartOptions/Component.purs
 peek ∷ ∀ a. H.ChildF ChartType Form.QueryP a → DSL Unit

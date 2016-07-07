@@ -91,6 +91,7 @@ cardEval = case _ of
   CC.ZoomIn next →
     pure next
 
+<<<<<<< HEAD
 <<<<<<< Updated upstream
 
 =======
@@ -99,6 +100,9 @@ cardEval = case _ of
 
 >>>>>>> slamdata/master
 >>>>>>> Stashed changes
+=======
+
+>>>>>>> slamdata/master
 takesInput ∷ Maybe Port.Port → CT.CardType → Boolean
 takesInput input =
   maybe false (ICT.takesInput $ ICT.fromMaybePort input) ∘ ICT.fromCardType

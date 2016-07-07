@@ -36,7 +36,10 @@ import SlamData.Workspace.Card.Chart.BuildOptions.Bar (buildBar)
 import SlamData.Workspace.Card.Chart.BuildOptions.Line (buildLine)
 import SlamData.Workspace.Card.Chart.BuildOptions.Pie (buildPie)
 <<<<<<< HEAD
+<<<<<<< HEAD
 import SlamData.Workspace.Card.Chart.BuildOptions.Area (buildArea)
+=======
+>>>>>>> slamdata/master
 =======
 >>>>>>> slamdata/master
 import SlamData.Workspace.Card.Chart.ChartType (ChartType(..))
