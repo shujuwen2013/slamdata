@@ -459,6 +459,41 @@ configure = void do
        , measures: [firstMeasures, secondMeasures]
        , aggregations: [firstAggregation, secondAggregation]
        }
+       
+  areaConfiguration ∷ AxisAccum → ChartConfiguration → ChartConfiguration
+  areaConfiguration axises current =
+    let allAxises = (axises.category ⊕ axises.time ⊕ axises.value)
+        dimensions =
+          setPreviousValueFrom (index current.dimensions 0)
+          $ autoSelect $ newSelect $ dependsOnArr axises.value
+          -- This is redundant, I've put it here to notify
+          -- that this behaviour differs from pieBar and can be changed.
+          $ allAxises
+        firstMeasures =
+          setPreviousValueFrom (index current.measures 0)
+          $ autoSelect $ newSelect $ depends dimensions
+          $ axises.value ⊝ dimensions
+        secondMeasures =
+          setPreviousValueFrom (index current.measures 1)
+          $ newSelect $ ifSelected [firstMeasures]
+          $ depends dimensions
+          $ axises.value ⊝ firstMeasures ⊝ dimensions
+        firstSeries =
+          setPreviousValueFrom (index current.series 0)
+          $ newSelect $ ifSelected [dimensions] $ allAxises ⊝ dimensions
+        secondSeries =
+          setPreviousValueFrom (index current.series 1)
+          $ newSelect $ ifSelected [dimensions, firstSeries]
+          $ allAxises ⊝ dimensions ⊝ firstSeries
+        firstAggregation =
+          setPreviousValueFrom (index current.aggregations 0) aggregationSelect
+        secondAggregation =
+          setPreviousValueFrom (index current.aggregations 1) aggregationSelect
+    in { series: [firstSeries, secondSeries]
+       , dimensions: [dimensions]
+       , measures: [firstMeasures, secondMeasures]
+       , aggregations: [firstAggregation, secondAggregation]
+       }
 
 peek ∷ ∀ a. H.ChildF ChartType Form.QueryP a → DSL Unit
 peek _ = configure *> CC.raiseUpdatedP' CC.EvalModelUpdate
