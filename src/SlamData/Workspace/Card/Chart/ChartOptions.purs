@@ -35,6 +35,7 @@ import SlamData.Workspace.Card.Chart.ChartConfiguration (ChartConfiguration)
 import SlamData.Workspace.Card.Chart.BuildOptions.Bar (buildBar)
 import SlamData.Workspace.Card.Chart.BuildOptions.Line (buildLine)
 import SlamData.Workspace.Card.Chart.BuildOptions.Pie (buildPie)
+import SlamData.Workspace.Card.Chart.BuildOptions.Area (buildArea)
 import SlamData.Workspace.Card.Chart.ChartType (ChartType(..))
 
 import Test.StrongCheck as SC
