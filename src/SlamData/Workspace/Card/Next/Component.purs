@@ -91,6 +91,7 @@ cardEval = case _ of
   CC.ZoomIn next →
     pure next
 
+
 takesInput ∷ Maybe Port.Port → CT.CardType → Boolean
 takesInput input =
   maybe false (ICT.takesInput $ ICT.fromMaybePort input) ∘ ICT.fromCardType

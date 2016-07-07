@@ -184,6 +184,7 @@ renderChartTypeSelector state =
   cls Bar = Rc.barChartIcon
   cls Area = Rc.areaChartIcon
 
+
 renderChartConfiguration ∷ VCS.State → HTML
 renderChartConfiguration state =
   HH.div
@@ -211,9 +212,9 @@ renderChartConfiguration state =
 renderDimensions ∷ VCS.State → HTML
 renderDimensions state =
   row
-  [ intChartInput Rc.axisLabelParam "Axis label angle"
+  [ chartInput Rc.axisLabelParam "Axis label angle"
       (_.axisLabelAngle ⋙ show) RotateAxisLabel (isPie state.chartType)
-  , intChartInput Rc.axisLabelParam "Axis font size"
+  , chartInput Rc.axisLabelParam "Axis font size"
       (_.axisLabelFontSize ⋙ show) SetAxisFontSize (isPie state.chartType)
   , boolChartInput Rc.chartDetailParam "If stack"
       (_.areaStacked)ToggleSetStacked (not $ isArea state.chartType)
@@ -221,13 +222,13 @@ renderDimensions state =
       (_.smooth) ToggleSetSmooth (not $ isArea state.chartType)
   ]
   where
-  intChartInput
+  chartInput
     ∷ HH.ClassName
     → String
     → (VCS.State → String)
     → (Int → Unit → Query Unit)
     → Boolean → HTML
-  intChartInput cls labelText valueFromState queryCtor isHidden =
+  chartInput cls labelText valueFromState queryCtor isHidden =
     HH.form
       [ HP.classes
           $ [ B.colXs6, cls ]
@@ -459,6 +460,7 @@ configure = void do
        , aggregations: [firstAggregation, secondAggregation]
        }
 
+<<<<<<< HEAD:src/SlamData/Workspace/Card/ChartOptions/Component.purs
   areaConfiguration ∷ AxisAccum → ChartConfiguration → ChartConfiguration
   areaConfiguration axises current =
     let allAxises = (axises.category ⊕ axises.time ⊕ axises.value)
@@ -494,5 +496,7 @@ configure = void do
        , aggregations: [firstAggregation, secondAggregation]
        }
 
+=======
+>>>>>>> slamdata/master:src/SlamData/Workspace/Card/ChartOptions/Component.purs
 peek ∷ ∀ a. H.ChildF ChartType Form.QueryP a → DSL Unit
 peek _ = configure *> CC.raiseUpdatedP' CC.EvalModelUpdate
