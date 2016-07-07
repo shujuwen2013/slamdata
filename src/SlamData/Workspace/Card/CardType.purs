@@ -67,18 +67,19 @@ data CardType
 insertableCardTypes ∷ Array CardType
 insertableCardTypes =
   [ Ace SQLMode
-  , Ace MarkdownMode
+  , Open
   , Search
+  , Table
+  , Variables
+  , Ace MarkdownMode
+  , Markdown
+  , Download
+  , DownloadOptions
   , ChartOptions
   , Chart
-  , Markdown
-  , Table
-  , Download
-  , Variables
+  , Draftboard
   , Troubleshoot
   , Cache
-  , Open
-  , DownloadOptions
   ]
 
 derive instance eqCardType ∷ Eq CardType
@@ -161,7 +162,7 @@ cardName =
     Cache → "Cache"
     Open → "Open"
     DownloadOptions → "Setup Download"
-    Draftboard → "Draftboard"
+    Draftboard → "Setup Draftboard"
     ErrorCard → "Error"
     PendingCard → "Pending"
 
