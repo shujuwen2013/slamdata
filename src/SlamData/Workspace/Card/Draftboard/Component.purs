@@ -57,7 +57,7 @@ import SlamData.Workspace.Card.Draftboard.Component.CSS as CCSS
 import SlamData.Workspace.Card.Draftboard.Component.Query (Query(..), QueryP, QueryC)
 import SlamData.Workspace.Card.Draftboard.Component.State (State, DeckPosition, initialState, encode, decode, _moving, _inserting, _grouping, modelFromState)
 import SlamData.Workspace.Card.Model as Card
-import SlamData.Workspace.Deck.Common (wrappedDeck, defaultPosition)
+import SlamData.Workspace.Deck.Common (wrappedDeck, defaultPosition, DeckOptions)
 import SlamData.Workspace.Deck.Component.Nested.Query as DNQ
 import SlamData.Workspace.Deck.Component.Nested.State as DNS
 import SlamData.Workspace.Deck.Component.Query as DCQ
@@ -406,9 +406,7 @@ addDeckAt { deck: opts, deckId: parentId, cardId } deck deckPos = do
         { decks = Map.insert deckId deckPos s.decks
         , inserting = false
         }
-      queryDeck deckId
-        $ H.action
-        $ DCQ.Load opts.path deckId (DL.succ opts.level)
+      loadAndFocus opts deckId
 
 deleteDeck ∷ CardOptions → DeckId → DraftboardDSL Unit
 deleteDeck { deck } deckId = do
@@ -442,30 +440,30 @@ wrapDeck { cardId, deckId: parentId, deck } oldId = do
               $ Map.delete oldId
               $ s.decks
           }
-        queryDeck newId
-          $ H.action
-          $ DCQ.Load deck.path newId (DL.succ deck.level)
+        loadAndFocus deck newId
 
 unwrapDeck
   ∷ CardOptions
   → DeckId
   → Map.Map DeckId (DeckPosition × DM.Deck)
   → DraftboardDSL Unit
-unwrapDeck { deckId, cardId, deck } oldId decks = void $ runMaybeT do
+unwrapDeck { deckId, cardId, deck: opts } oldId decks = void $ runMaybeT do
   -- sort the decks here so they are ordered by position, this ensures that if
   -- decks need to be accomodated when broken out, the decks in the top left
   -- corner will maintain their position and the others will be accomodated.
   let deckList = List.sortBy (compare `on` toCoords) $ Map.toList decks
   let coord = deckId × cardId
-  let level' = DL.succ deck.level
+  let level' = DL.succ opts.level
   offset ← MaybeT $ H.gets (Map.lookup oldId ∘ _.decks)
   lift do
     H.modify \s →
       s { decks = foldl (reinsert offset) (Map.delete oldId s.decks) deckList }
     for_ deckList \(deckId × (_ × deck)) → do
       let deck' = deck { parent = Just coord }
-      queryDeck deckId $ H.action $ DCQ.SetModel deckId deck' level'
-      queryDeck deckId $ H.action $ DCQ.Save Nothing
+      putDeck opts.path deckId deck' opts.wiring.decks
+      queryDeck deckId
+        $ H.action
+        $ DCQ.Load opts.path deckId level'
   where
   reinsert offset acc (deckId × (pos × deck)) =
     Map.insert deckId (updatePos (Map.toList acc) offset pos) acc
@@ -555,9 +553,14 @@ groupDecks { cardId, deckId, deck } deckFrom deckTo = do
                   $ Map.delete deckTo
                   $ s.decks
               }
-            queryDeck newId
-              $ H.action
-              $ DCQ.Load deck.path newId (DL.succ deck.level)
+            loadAndFocus deck newId
 
 queryDeck ∷ ∀ a. DeckId → DCQ.Query a → DraftboardDSL (Maybe a)
 queryDeck deckId = H.query deckId ∘ right
+
+loadAndFocus ∷ DeckOptions → DeckId → DraftboardDSL Unit
+loadAndFocus opts deckId =
+  traverse_ (queryDeck deckId ∘ H.action)
+    [ DCQ.Load opts.path deckId (DL.succ opts.level)
+    , DCQ.Focus
+    ]
