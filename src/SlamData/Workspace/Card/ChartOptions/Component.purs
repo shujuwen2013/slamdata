@@ -184,7 +184,14 @@ renderChartTypeSelector state =
   cls Bar = Rc.barChartIcon
   cls Area = Rc.areaChartIcon
 
+<<<<<<< Updated upstream
 
+=======
+<<<<<<< HEAD:src/SlamData/Workspace/Card/ChartOptions/Component.purs
+=======
+
+>>>>>>> slamdata/master:src/SlamData/Workspace/Card/ChartOptions/Component.purs
+>>>>>>> Stashed changes
 renderChartConfiguration ∷ VCS.State → HTML
 renderChartConfiguration state =
   HH.div
@@ -228,7 +235,15 @@ renderDimensions state =
     → (VCS.State → String)
     → (Int → Unit → Query Unit)
     → Boolean → HTML
+<<<<<<< Updated upstream
   chartInput cls labelText valueFromState queryCtor isHidden =
+=======
+<<<<<<< HEAD:src/SlamData/Workspace/Card/ChartOptions/Component.purs
+  intChartInput cls labelText valueFromState queryCtor isHidden =
+=======
+  chartInput cls labelText valueFromState queryCtor isHidden =
+>>>>>>> slamdata/master:src/SlamData/Workspace/Card/ChartOptions/Component.purs
+>>>>>>> Stashed changes
     HH.form
       [ HP.classes
           $ [ B.colXs6, cls ]
