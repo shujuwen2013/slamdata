@@ -1,3 +1,19 @@
+{-
+Copyright 2016 SlamData, Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-}
+
 module SlamData.Workspace.Deck.Dialog.Share.Component where
 
 import SlamData.Prelude
@@ -361,7 +377,7 @@ eval (Share next) = next <$ do
       Left _ →
         showConnectionError
       Right token →
-        H.modify (_{ tokenSecret = QT.runTokenHash <$> token.secret
+        H.modify (_{ tokenSecret = Just $ QT.runTokenHash token.secret
                    , submitting = false
                    })
     else do
@@ -369,10 +385,10 @@ eval (Share next) = next <$ do
       shareRequest ∷ QT.ShareRequestR
       shareRequest =
         { users: (if state.subjectType ≡ User
-                  then map (const $ QT.UserId state.email) actions
+                  then [ QT.UserId state.email ]
                   else [ ])
         , groups: (if state.subjectType ≡ Group
-                   then Arr.catMaybes $ map (const $ state.groupSelected) actions
+                   then foldMap pure state.groupSelected
                    else [ ])
         , actions
         }

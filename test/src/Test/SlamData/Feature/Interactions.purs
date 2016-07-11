@@ -48,7 +48,7 @@ accessBreadcrumb ∷ String → SlamFeature Unit
 accessBreadcrumb = Feature.click ∘ XPath.anywhere ∘ XPaths.accessBreadcrumb
 
 browseRootFolder ∷ SlamFeature Unit
-browseRootFolder = do
+browseRootFolder =
   tryRepeatedlyTo do
     ((Feature.clickNotRepeatedly $ XPath.anywhere XPaths.headerGripper)
      <|>
@@ -313,8 +313,7 @@ provideApiVariableBindingsForVariablesCard name ty val =
   where
   provideValueForVariablesCard ∷ String → SlamFeature Unit
   provideValueForVariablesCard name = do
-    Feature.provideFieldValueUntilExpectedValue
-      name
+    Feature.provideFieldValue
       (XPath.first $ XPath.anywhere $ XPaths.variablesCardVariableName)
       name
     Feature.pressEnter
@@ -327,8 +326,7 @@ provideApiVariableBindingsForVariablesCard name ty val =
 
   provideDefaultValueForVariablesCard ∷ String → String → SlamFeature Unit
   provideDefaultValueForVariablesCard name val = do
-    Feature.provideFieldValueUntilExpectedValue
-      val
+    Feature.provideFieldValue
       (XPath.first $ XPath.anywhere $ XPaths.variablesCardDefaultValueFor name)
       val
     Feature.pressEnter
@@ -367,9 +365,13 @@ publishDeck ∷ SlamFeature Unit
 publishDeck =
   Feature.click $ XPath.anywhere $ XPath.anyWithExactAriaLabel "Publish deck"
 
-filterActions ∷ String → SlamFeature Unit
-filterActions =
-  Feature.provideFieldValue (XPath.anywhere $ XPath.anyWithExactAriaLabel "Filter actions")
+filterDeckAndCardActions ∷ String → SlamFeature Unit
+filterDeckAndCardActions =
+  Feature.provideFieldValue (XPath.anywhere $ XPath.anyWithExactAriaLabel "Filter deck and card actions")
+
+filterNextActions ∷ String → SlamFeature Unit
+filterNextActions =
+  Feature.provideFieldValue (XPath.anywhere $ XPath.anyWithExactAriaLabel "Filter next actions")
 
 confirmDeckAction ∷ SlamFeature Unit
 confirmDeckAction =

@@ -19,6 +19,7 @@ module SlamData.Workspace.Wiring
   , Cache
   , CardEval
   , DeckRef
+  , ActiveState
   , PendingMessage
   , DeckMessage(..)
   , makeWiring
@@ -35,18 +36,20 @@ import SlamData.Prelude
 
 import Control.Monad.Aff.AVar (AVar, makeVar', takeVar, putVar, modifyVar)
 import Control.Monad.Aff.Bus as Bus
-import Control.Monad.Aff.Free (class Affable, fromAff)
+import Control.Monad.Aff.Free (class Affable, fromAff, fromEff)
 import Control.Monad.Aff.Promise (Promise, wait, defer)
 import Control.Monad.Eff.Exception (message)
-import Data.Set as Set
+import Control.Monad.Eff.Ref (Ref, newRef)
 
 import Data.Map as Map
+import Data.Set as Set
 
 import SlamData.Effects (SlamDataEffects)
 import SlamData.Quasar.Data as Quasar
 import SlamData.Workspace.Card.Model as Card
 import SlamData.Workspace.Card.CardId (CardId)
 import SlamData.Workspace.Card.Port (Port)
+import SlamData.Workspace.Card.Port.VarMap as Port
 import SlamData.Workspace.Deck.Model (Deck, deckIndex, decode, encode)
 import SlamData.Workspace.Deck.DeckId (DeckId)
 import SlamData.Workspace.Deck.AdditionalSource (AdditionalSource)
@@ -71,12 +74,19 @@ type PendingMessage =
 
 data DeckMessage
   = DeckFocused DeckId
+  | URLVarMapsUpdated
+
+type ActiveState =
+  { cardIndex ∷ Int
+  }
 
 type Wiring =
   { decks ∷ Cache DeckId DeckRef
+  , activeState ∷ Cache DeckId ActiveState
   , cards ∷ Cache (DeckId × CardId) CardEval
   , pending ∷ Bus.BusRW PendingMessage
   , messaging ∷ Bus.BusRW DeckMessage
+  , urlVarMaps ∷ Ref (Map.Map DeckId Port.URLVarMap)
   }
 
 makeWiring
@@ -85,10 +95,12 @@ makeWiring
   ⇒ m Wiring
 makeWiring = fromAff do
   decks ← makeCache
+  activeState ← makeCache
   cards ← makeCache
   pending ← Bus.make
   messaging ← Bus.make
-  pure { decks, cards, pending, messaging }
+  urlVarMaps ← fromEff (newRef mempty)
+  pure { decks, activeState, cards, pending, messaging, urlVarMaps }
 
 makeCache
   ∷ ∀ m k v

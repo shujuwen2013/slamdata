@@ -31,12 +31,13 @@ import Halogen.HTML.Events.Types (Event, MouseEvent)
 import SlamData.Workspace.Card.CardId (CardId)
 import SlamData.Workspace.Card.Draftboard.Model (DeckPosition)
 import SlamData.Workspace.Card.Model as Card
-import SlamData.Workspace.Card.Port.VarMap as Port
+import SlamData.Workspace.Card.Port.VarMap (VarMap)
 import SlamData.Workspace.Deck.DeckId (DeckId)
 import SlamData.Workspace.Deck.DeckLevel (DeckLevel)
 import SlamData.Workspace.Deck.Gripper.Def (GripperDef)
 import SlamData.Workspace.Deck.Model (Deck)
 import SlamData.Workspace.Wiring (DeckMessage, PendingMessage)
+import SlamData.Workspace.Deck.Dialog.Share.Model (SharingInput)
 
 import Utils.Path as UP
 
@@ -57,7 +58,7 @@ data Query a
   | SetModelCards (Array (DeckId × Card.Model)) a
   | Save (Maybe (DeckId × CardId)) a
   | Reset UP.DirPath a
-  | SetGlobalVarMap Port.VarMap a
+  | GetVarMaps (Map.Map DeckId VarMap → a)
   | FlipDeck a
   | GrabDeck (Event MouseEvent) a
   | ResizeDeck (Event MouseEvent) a
@@ -72,6 +73,7 @@ data Query a
   | DoAction DeckAction a
   | Focus a
   | HandleMessage DeckMessage a
+  | GetSharingInput (SharingInput → a)
 
 data DeckAction
   = Mirror
