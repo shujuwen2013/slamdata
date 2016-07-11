@@ -381,7 +381,7 @@ configure = void do
            then [Pie, Bar, Line, Area]
            else if (null axises.time) && (length axises.value < 2)
                 then []
-                else [Line]
+                else [Line, Area]
 
   getAxises ∷ DSL AxisAccum
   getAxises = do
