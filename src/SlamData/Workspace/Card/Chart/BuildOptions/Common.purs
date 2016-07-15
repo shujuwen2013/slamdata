@@ -295,7 +295,13 @@ pieBarRawData (Cons (Just category) cs) (Cons mbFirstSerie fss)
   alterFn v vals = pure $ cons v $ fromMaybe [] vals
 
 aggregate ∷ Aggregation → LabeledPoints → PieBarData
-aggregate agg acc = map (runAggregation agg) acc
+aggregate agg acc = case agg of
+  -- 'None' aggreation is not suitable for Pie and Bar Chart
+  -- avoid 'None' aggreation by controlling the options in aggreation selector
+  -- in case that aggreation is 'None', coerce it to be replaced by 'Sum'
+  None → map (fromMaybe zero <<< runAggregation Sum) acc
+  -- aggreations other than 'None' always generate vaild (Just) values
+  _ → map (fromMaybe zero <<< runAggregation agg) acc
 
 
 -- Having array of pairs Key → Number and array of categories (String)

@@ -302,6 +302,9 @@ lineChartIcon = className "line-chart-icon"
 areaChartIcon ∷ ClassName
 areaChartIcon = className "area-chart-icon"
 
+scatterChartIcon ∷ ClassName
+scatterChartIcon = className "scatter-chart-icon"
+
 deleteDeckIcon ∷ ClassName
 deleteDeckIcon = className "delete-deck-icon"
 

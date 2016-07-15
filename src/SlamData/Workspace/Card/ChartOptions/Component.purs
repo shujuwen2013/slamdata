@@ -28,6 +28,7 @@ import Data.Lens ((.~), (^?))
 import Data.List as L
 import Data.Map as M
 import Data.Set as Set
+import Data.Tuple
 
 import CSS.Geometry (marginBottom)
 import CSS.Size (px)
@@ -47,11 +48,11 @@ import SlamData.Quasar.Query as Quasar
 import SlamData.Render.Common (row)
 import SlamData.Render.CSS as Rc
 import SlamData.Workspace.Card.CardType (CardType(ChartOptions))
-import SlamData.Workspace.Card.Chart.Aggregation (aggregationSelect)
+import SlamData.Workspace.Card.Chart.Aggregation (aggregationSelect, aggregationSelectWithNone)
 import SlamData.Workspace.Card.Chart.Axis (analyzeJArray, Axis)
 import SlamData.Workspace.Card.Chart.Axis as Ax
 import SlamData.Workspace.Card.Chart.ChartConfiguration (ChartConfiguration, depends, dependsOnArr)
-import SlamData.Workspace.Card.Chart.ChartType (ChartType(..), isPie, isArea)
+import SlamData.Workspace.Card.Chart.ChartType (ChartType(..), isPie, isArea, isScatter)
 import SlamData.Workspace.Card.Common.Render (renderLowLOD)
 import SlamData.Workspace.Card.Component as CC
 import SlamData.Workspace.Card.Model as Card
@@ -177,12 +178,14 @@ renderChartTypeSelector state =
   src Line = "img/line.svg"
   src Bar = "img/bar.svg"
   src Area = "img/area.svg"
+  src Scatter = "img/scatter.svg"
 
   cls ∷ ChartType → HH.ClassName
   cls Pie = Rc.pieChartIcon
   cls Line = Rc.lineChartIcon
   cls Bar = Rc.barChartIcon
   cls Area = Rc.areaChartIcon
+  cls Scatter = Rc.scatterChartIcon
 
 
 renderChartConfiguration ∷ VCS.State → HTML
@@ -193,6 +196,7 @@ renderChartConfiguration state =
     , renderTab Line
     , renderTab Bar
     , renderTab Area
+    , renderTab Scatter
     , renderDimensions state
     ]
   where
@@ -213,11 +217,13 @@ renderDimensions ∷ VCS.State → HTML
 renderDimensions state =
   row
   [ chartInput Rc.axisLabelParam "Axis label angle"
-      (_.axisLabelAngle ⋙ show) RotateAxisLabel (isPie state.chartType)
+      (_.axisLabelAngle ⋙ show) RotateAxisLabel 
+        (isPie state.chartType || isScatter state.chartType)
   , chartInput Rc.axisLabelParam "Axis font size"
-      (_.axisLabelFontSize ⋙ show) SetAxisFontSize (isPie state.chartType)
+      (_.axisLabelFontSize ⋙ show) SetAxisFontSize 
+        (isPie state.chartType || isScatter state.chartType)
   , boolChartInput Rc.chartDetailParam "If stack"
-      (_.areaStacked)ToggleSetStacked (not $ isArea state.chartType)
+      (_.areaStacked) ToggleSetStacked (not $ isArea state.chartType)
   , boolChartInput Rc.chartDetailParam "If smooth"
       (_.smooth) ToggleSetSmooth (not $ isArea state.chartType)
   ]
@@ -307,7 +313,7 @@ cardEval = case _ of
     st ← H.get
     config ← H.query st.chartType $ left $ H.request Form.GetConfiguration
     pure ∘ k $ Card.ChartOptions
-      { chartConfig: fromMaybe Form.initialState config
+      { chartConfig: fromMaybe Form.initialState.chartConfiguration config
       , options:
           { chartType: st.chartType
           , axisLabelFontSize: st.axisLabelFontSize
@@ -323,7 +329,7 @@ cardEval = case _ of
         H.set st
         H.query st.chartType
           $ left
-          $ H.action $ Form.SetConfiguration model.chartConfig
+          $ H.action $ Form.SetState (Tuple st.chartType model.chartConfig)
         pure unit
       _ → pure unit
     pure next
@@ -349,13 +355,15 @@ configure ∷ DSL Unit
 configure = void do
   axises ← getAxises
   pieConf ← getOrInitial Pie
-  setConfFor Pie $ pieBarConfiguration axises pieConf
+  setStateFor Pie $ pieBarConfiguration axises pieConf
   lineConf ← getOrInitial Line
-  setConfFor Line $ lineConfiguration axises lineConf
+  setStateFor Line $ lineConfiguration axises lineConf
   barConf ← getOrInitial Bar
-  setConfFor Bar $ pieBarConfiguration axises barConf
+  setStateFor Bar $ pieBarConfiguration axises barConf
   areaConf ← getOrInitial Area
-  setConfFor Area $ areaConfiguration axises areaConf
+  setStateFor Area $ areaConfiguration axises areaConf
+  scatterConf ← getOrInitial Scatter
+  setStateFor Scatter $ scatterConfiguration axises scatterConf
   let chartTypes = available axises
   H.modify (VCS._availableChartTypes .~ available axises)
   case Set.toList chartTypes of
@@ -364,13 +372,13 @@ configure = void do
   where
   getOrInitial ∷ ChartType → DSL ChartConfiguration
   getOrInitial ty =
-    map (fromMaybe Form.initialState)
+    map (fromMaybe Form.initialState.chartConfiguration)
       $ H.query ty
       $ left (H.request Form.GetConfiguration)
 
-  setConfFor ∷ ChartType → ChartConfiguration → DSL Unit
-  setConfFor ty conf =
-    void $ H.query ty $ left $ H.action $ Form.SetConfiguration conf
+  setStateFor ∷ ChartType → ChartConfiguration → DSL Unit
+  setStateFor ty conf =
+    void $ H.query ty $ left $ H.action $ Form.SetState (Tuple ty conf)
 
   available ∷ AxisAccum → Set.Set ChartType
   available axises =
@@ -378,7 +386,7 @@ configure = void do
     $ if null axises.value
       then []
       else if not $ null axises.category
-           then [Pie, Bar, Line, Area]
+           then [Pie, Bar, Line, Area, Scatter]
            else if (null axises.time) && (length axises.value < 2)
                 then []
                 else [Line]
@@ -495,5 +503,33 @@ configure = void do
        , aggregations: [firstAggregation, secondAggregation]
        }
 
+  scatterConfiguration ∷ AxisAccum → ChartConfiguration → ChartConfiguration
+  scatterConfiguration axises current =
+    let allAxises = (axises.category ⊕ axises.time ⊕ axises.value)
+        firstMeasures =
+          setPreviousValueFrom (index current.measures 0)
+          $ autoSelect $ newSelect $ axises.value
+        secondMeasures =
+          setPreviousValueFrom (index current.measures 1)
+          $ autoSelect $ newSelect $ depends firstMeasures
+          $ axises.value ⊝ firstMeasures
+        firstSeries =
+          setPreviousValueFrom (index current.series 0)
+          $ newSelect $ ifSelected [secondMeasures]
+          $ allAxises
+        secondSeries =
+          setPreviousValueFrom (index current.series 1)
+          $ newSelect $ ifSelected [firstSeries]
+          $ allAxises ⊝ firstSeries
+        firstAggregation =
+          setPreviousValueFrom (index current.aggregations 0) aggregationSelectWithNone
+        secondAggregation =
+          setPreviousValueFrom (index current.aggregations 1) aggregationSelectWithNone
+    in { series: [firstSeries, secondSeries]
+       , dimensions: []
+       , measures: [firstMeasures, secondMeasures]
+       , aggregations: [firstAggregation, secondAggregation]
+       }
+  
 peek ∷ ∀ a. H.ChildF ChartType Form.QueryP a → DSL Unit
 peek _ = configure *> CC.raiseUpdatedP' CC.EvalModelUpdate
