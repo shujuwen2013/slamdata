@@ -55,7 +55,7 @@ renderError err =
 renderDeck ∷ DeckOptions → DeckComponent → DCS.State → DeckHTML
 renderDeck opts deckComponent st =
   HH.div
-    ([ HP.classes $ [CSS.deckContainer] ⊕ (guard st.focused $> CSS.focused) ]
+    (deckClasses st
      ⊕ deckProperties
      ⊕ Slider.containerProperties st)
     [ HH.div
@@ -88,10 +88,16 @@ renderDeck opts deckComponent st =
       ]
       [ backside ]
 
+deckClasses ∷ ∀ r. DCS.State → Array (HP.IProp (HP.InteractiveEvents (HP.GlobalProperties r)) (Query Unit))
+deckClasses st =
+  pure $ HP.classes $
+    [ CSS.deckContainer
+    , HH.className (responsiveSize st.responsiveSize)
+    ] ⊕ (guard st.focused $> CSS.focused)
+
 deckProperties ∷ ∀ r. Array (HP.IProp (HP.InteractiveEvents (HP.GlobalProperties r)) (Query Unit))
 deckProperties =
   [ HP.key "deck-container"
-  , HE.onMouseUp (HE.input_ UpdateCardSize)
   , HE.onMouseDown \_ → HEH.stopPropagation $> Just (H.action Focus)
   , HP.ref (H.action ∘ SetCardElement)
   ]
@@ -197,3 +203,12 @@ zoomOutButton =
    , HE.onClick (HE.input_ ZoomOut)
    ]
    [ glyph B.glyphiconZoomOut ]
+
+responsiveSize ∷ DCS.ResponsiveSize → String
+responsiveSize = case _ of
+  DCS.XSmall  → "sd-size-xsmall"
+  DCS.Small   → "sd-size-small"
+  DCS.Medium  → "sd-size-medium"
+  DCS.Large   → "sd-size-large"
+  DCS.XLarge  → "sd-size-xlarge"
+  DCS.XXLarge → "sd-size-xxlarge"

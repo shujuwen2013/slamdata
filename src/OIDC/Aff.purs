@@ -1,12 +1,9 @@
 {-
 Copyright 2016 SlamData, Inc.
-
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
-
     http://www.apache.org/licenses/LICENSE-2.0
-
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,9 +15,10 @@ module OIDC.Aff where
 
 import SlamData.Prelude
 
+import Text.Parsing.StringParser (ParseError)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Random (random, RANDOM)
-import Control.UI.Browser (hostAndProtocol, getHref, setLocation)
+import Control.UI.Browser (hostAndProtocol, getHref)
 import Data.StrMap as Sm
 import Data.URI (printURI, runParseURI)
 import Data.URI.Types as URI
@@ -29,10 +27,11 @@ import OIDCCryptUtils as Cryptography
 import Quasar.Advanced.Types (ProviderR)
 import SlamData.Quasar.Auth as Auth
 
-requestAuthentication
+requestAuthenticationURI
   ∷ ProviderR
-  → ∀ e. Eff (dom ∷ DOM, random ∷ RANDOM | e) Unit
-requestAuthentication pr = do
+  → String
+  → ∀ e. Eff (dom ∷ DOM, random ∷ RANDOM | e) (Either ParseError String)
+requestAuthenticationURI pr redirectURIStr = do
   csrf ← (Cryptography.KeyString ∘ show) <$> random
   replay ← (Cryptography.UnhashedNonce ∘ show) <$> random
   Auth.storeKeyString csrf
@@ -40,16 +39,11 @@ requestAuthentication pr = do
   Auth.storeClientId pr.clientID
   hap ← hostAndProtocol
   hrefState ← map Cryptography.StateString getHref
-  let
-    authURIString = pr.openIDConfiguration.authorizationEndpoint
-  -- The only way to get incorrect `authURIString` is incorrect config
-  -- In this situation nothing happens.
-  for_ (runParseURI authURIString) \(URI.URI s h q f) →
+  let authURIString = pr.openIDConfiguration.authorizationEndpoint
+  for (runParseURI authURIString) \(URI.URI s h q f) →
     let
       nonce =
         Cryptography.hashNonce replay
-      redirectURIStr =
-        hap <> SlamData.Config.redirectURIString
       state =
         Cryptography.bindState hrefState csrf
       query =
@@ -66,4 +60,4 @@ requestAuthentication pr = do
           , Tuple "nonce" $ Cryptography.runHashedNonce nonce
           ]
       uri = URI.URI s h query f
-    in setLocation $ printURI uri
+    in pure $ printURI uri

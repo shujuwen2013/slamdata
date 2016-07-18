@@ -117,6 +117,7 @@ eval opts@{ wiring } = case _ of
     pb ← subscribeToBus' (H.action ∘ RunPendingCards) wiring.pending
     mb ← subscribeToBus' (H.action ∘ HandleMessage) wiring.messaging
     H.modify $ DCS._breakers .~ [pb, mb]
+    updateCardSize
     pure next
   Finish next → do
     H.modify _ { finalized = true }
@@ -158,6 +159,7 @@ eval opts@{ wiring } = case _ of
         { stateMode = Ready
         , displayCards = [ st.id × nextActionCard ]
         , deckElement = st.deckElement
+        , responsiveSize = st.responsiveSize
         }
     pure next
   SetParent parent next →
@@ -209,7 +211,7 @@ eval opts@{ wiring } = case _ of
   GrabDeck _ next →
     pure next
   UpdateCardSize next → do
-    H.queryAll' cpCard $ left $ H.action UpdateDimensions
+    updateCardSize
     pure next
   ResizeDeck _ next →
     pure next
@@ -245,8 +247,11 @@ eval opts@{ wiring } = case _ of
   SetCardElement element next → do
     H.modify _ { deckElement = element }
     pure next
-  StopSliderTransition next →
-    H.modify (DCS._sliderTransition .~ false) $> next
+  StopSliderTransition next → do
+    sliderTransition ← H.gets _.sliderTransition
+    when sliderTransition $
+      H.modify $ DCS._sliderTransition .~ false
+    pure next
   DoAction _ next → pure next
   Focus next → do
     st ← H.get
@@ -255,10 +260,10 @@ eval opts@{ wiring } = case _ of
       H.fromAff $ Bus.write (DeckFocused st.id) wiring.messaging
     pure next
   HandleMessage msg next → do
-    st <- H.get
+    st ← H.get
     case msg of
       DeckFocused focusedDeckId →
-        when (st.id /= focusedDeckId && st.focused) $
+        when (st.id ≠ focusedDeckId && st.focused) $
           H.modify (DCS._focused .~ false)
       URLVarMapsUpdated →
         traverse_ runCard $ DCS.variablesCards st
@@ -329,16 +334,29 @@ peekBackSide opts (Back.DoAction action _) =
     Back.Trash → do
       state ← H.get
       lastId ← H.gets DCS.findLastRealCard
-      for_ (DCS.activeCardCoord state <|> lastId) \trashId → do
-        let rem = DCS.removeCard trashId state
-        DBC.childDeckIds (snd <$> fst rem) #
-          H.fromAff ∘ runPar ∘ traverse_ (Par ∘ DBC.deleteGraph state.path)
-        H.set $ snd rem
-        triggerSave Nothing
-        updateActiveCardAndIndicator opts.wiring
-        H.modify $ DCS._displayMode .~ DCS.Normal
-        DCS.activeCardCoord (snd rem)
-          # maybe (runCardUpdates opts state.id L.Nil) (queuePendingCard opts.wiring)
+      for_ (DCS.activeCardCoord state <|> lastId)  \trashId →
+        case snd trashId of
+          ErrorCardId → do
+            showDialog
+              $ Dialog.Error "You cannot delete the error card. Please, fix errors or slide to previous card."
+            H.modify (DCS._displayMode .~ DCS.Dialog)
+          NextActionCardId → do
+            showDialog
+              $ Dialog.Error "You cannot delete the next action card. Please, slide to previous card."
+            H.modify (DCS._displayMode .~ DCS.Dialog)
+          PendingCardId → do
+            showDialog
+              $ Dialog.Error "You cannot delete the pending card. Please, wait till card evaluation is finished."
+          CardId _ → do
+            let rem = DCS.removeCard trashId state
+            DBC.childDeckIds (snd <$> fst rem)
+              # H.fromAff ∘ runPar ∘ traverse_ (Par ∘ DBC.deleteGraph state.path)
+            H.set $ snd rem
+            triggerSave Nothing
+            updateActiveCardAndIndicator opts.wiring
+            H.modify $ DCS._displayMode .~ DCS.Normal
+            DCS.activeCardCoord (snd rem)
+              # maybe (runCardUpdates opts state.id L.Nil) (queuePendingCard opts.wiring)
       void $ H.queryAll' cpCard $ left $ H.action UpdateDimensions
     Back.Rename → do
       name ← H.gets _.name
@@ -660,20 +678,17 @@ runCardUpdates opts source steps = do
       $ (DCS._stateMode .~ Ready)
       ∘ (DCS._activeCardIndex .~ (activeCardIndex <|> lastIndex))
 
-  -- Splice in the new display cards and run their updates.
+  -- Splice in the new display cards
   for_ (Array.head updateResult.displayCards) \card → do
     let
       pendingId = DCS.coordModelToCoord card
       oldCards = Array.takeWhile (not ∘ DCS.eqCoordModel pendingId) realCards
       displayCards = oldCards <> updateResult.displayCards
-
-    H.modify
-      $ DCS._displayCards .~ displayCards
-
-    for_ updateResult.updates $
-      updateCard st source pendingId loadedCards
+    H.modify $ DCS._displayCards .~ displayCards
 
   updateActiveCardAndIndicator opts.wiring
+  for_ updateResult.updates $ updateCard st source loadedCards
+  updateCardSize
 
   where
   updateCards ∷ DCS.State → UpdateAccum → Pr.Promise UpdateResult
@@ -705,11 +720,10 @@ runCardUpdates opts source steps = do
   updateCard
     ∷ DCS.State
     → DeckId
-    → DeckId × CardId
     → Set.Set (DeckId × CardId)
     → CardEval
     → DeckDSL Unit
-  updateCard st source pendingId loadedCards step = void do
+  updateCard st source loadedCards step = void do
     input ← for step.input (H.fromAff ∘ Pr.wait)
     output ← for step.output (H.fromAff ∘ Pr.wait)
     urlVarMaps ← H.fromEff $ Ref.readRef opts.wiring.urlVarMaps
@@ -844,6 +858,7 @@ setModel
     }
   → DeckDSL Unit
 setModel opts model = do
+  updateCardSize
   H.modify
     $ (DCS._stateMode .~ Preparing)
     ∘ DCS.fromModel model
@@ -916,3 +931,18 @@ getSharingInput = do
 
   pure
     $ foldl foldChildren thisDeckSharingInput childrenInput
+
+updateCardSize ∷ DeckDSL Unit
+updateCardSize = do
+  H.queryAll' cpCard $ left $ H.action UpdateDimensions
+  H.gets _.deckElement >>= traverse_ \el -> do
+    { width } ← H.fromEff $ getBoundingClientRect el
+    H.modify $ DCS._responsiveSize .~ breakpoint width
+  where
+  breakpoint w
+    | w < 240.0 = DCS.XSmall
+    | w < 320.0 = DCS.Small
+    | w < 420.0 = DCS.Medium
+    | w < 540.0 = DCS.Large
+    | w < 720.0 = DCS.XLarge
+    | otherwise = DCS.XXLarge
