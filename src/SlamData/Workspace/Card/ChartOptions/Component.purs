@@ -46,7 +46,7 @@ import SlamData.Workspace.Card.CardType as CT
 import SlamData.Workspace.Card.Chart.Aggregation (aggregationSelect)
 import SlamData.Workspace.Card.Chart.Axis (Axes)
 import SlamData.Workspace.Card.Chart.ChartConfiguration (ChartConfiguration, depends, dependsOnArr)
-import SlamData.Workspace.Card.Chart.ChartType (ChartType(..), isPie, isArea)
+import SlamData.Workspace.Card.Chart.ChartType (ChartType(..), isPie)
 import SlamData.Workspace.Card.ChartOptions.Component.CSS as CSS
 import SlamData.Workspace.Card.ChartOptions.Component.Query (QueryC, Query(..))
 import SlamData.Workspace.Card.ChartOptions.Component.State as VCS
@@ -178,7 +178,6 @@ renderChartTypeSelector state =
   cls Pie = CSS.pieChartIcon
   cls Line = CSS.lineChartIcon
   cls Bar = CSS.barChartIcon
-  cls Area = CSS.areaChartIcon
 
 
 renderChartConfiguration ∷ VCS.State → HTML
@@ -315,8 +314,6 @@ cardEval = case _ of
         Bar | not $ F.any isSelected rawConfig.measures → Nothing
         Line | not $ F.any isSelected rawConfig.dimensions → Nothing
         Line | not $ F.any isSelected rawConfig.measures → Nothing
-        Area | not $ F.any isSelected rawConfig.dimensions → Nothing
-        Area | not $ F.any isSelected rawConfig.measures → Nothing
         _ → Just rawConfig
 
     pure ∘ k $ Card.ChartOptions
@@ -362,8 +359,6 @@ configure = void do
   setConfFor Line $ lineConfiguration axes lineConf
   barConf ← getOrInitial Bar
   setConfFor Bar $ pieBarConfiguration axes barConf
-  areaConf ← getOrInitial Area
-  setConfFor Area $ areaConfiguration axes areaConf
   where
   getOrInitial ∷ ChartType → DSL ChartConfiguration
   getOrInitial ty =
@@ -439,40 +434,6 @@ configure = void do
        , aggregations: [firstAggregation, secondAggregation]
        }
 
-  areaConfiguration ∷ Axes → ChartConfiguration → ChartConfiguration
-  areaConfiguration axes current =
-    let allAxises = (axes.category ⊕ axes.time ⊕ axes.value)
-        dimensions =
-          setPreviousValueFrom (index current.dimensions 0)
-          $ autoSelect $ newSelect $ dependsOnArr axes.value
-          -- This is redundant, I've put it here to notify
-          -- that this behaviour differs from pieBar and can be changed.
-          $ allAxises
-        firstMeasures =
-          setPreviousValueFrom (index current.measures 0)
-          $ autoSelect $ newSelect $ depends dimensions
-          $ axes.value ⊝ dimensions
-        secondMeasures =
-          setPreviousValueFrom (index current.measures 1)
-          $ newSelect $ ifSelected [firstMeasures]
-          $ depends dimensions
-          $ axes.value ⊝ firstMeasures ⊝ dimensions
-        firstSeries =
-          setPreviousValueFrom (index current.series 0)
-          $ newSelect $ ifSelected [dimensions] $ allAxises ⊝ dimensions
-        secondSeries =
-          setPreviousValueFrom (index current.series 1)
-          $ newSelect $ ifSelected [dimensions, firstSeries]
-          $ allAxises ⊝ dimensions ⊝ firstSeries
-        firstAggregation =
-          setPreviousValueFrom (index current.aggregations 0) aggregationSelect
-        secondAggregation =
-          setPreviousValueFrom (index current.aggregations 1) aggregationSelect
-    in { series: [firstSeries, secondSeries]
-       , dimensions: [dimensions]
-       , measures: [firstMeasures, secondMeasures]
-       , aggregations: [firstAggregation, secondAggregation]
-       }
 
 peek ∷ ∀ a. H.ChildF ChartType Form.QueryP a → DSL Unit
 peek _ = configure *> CC.raiseUpdatedP' CC.EvalModelUpdate
