@@ -133,9 +133,6 @@ shareButton = className "share-button"
 aggregation ∷ ClassName
 aggregation = className "aggregation"
 
-areaChartIcon ∷ ClassName
-areaChartIcon = className "area-chart-icon"
-
 deleteDeckIcon ∷ ClassName
 deleteDeckIcon = className "delete-deck-icon"
 
@@ -237,12 +234,3 @@ form = className "sd-form"
 
 formButton ∷ ClassName
 formButton = className "sd-form-button"
-
-axisLabelParam ∷ ClassName
-axisLabelParam = className "axis-label-param"
-
-chartSizeParam ∷ ClassName
-chartSizeParam = className "chart-size-param"
-
-chartDetailParam ∷ ClassName
-chartDetailParam = className "chart-detail-param"

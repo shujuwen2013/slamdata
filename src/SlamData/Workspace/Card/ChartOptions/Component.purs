@@ -212,9 +212,9 @@ renderDimensions state =
       (_.axisLabelAngle ⋙ show) RotateAxisLabel (isPie state.chartType)
   , chartInput CSS.axisLabelParam "Axis font size"
       (_.axisLabelFontSize ⋙ show) SetAxisFontSize (isPie state.chartType)
-  , boolChartInput Rc.chartDetailParam "If stack"
+  , boolChartInput CSS.chartDetailParam "If stack"
       (_.areaStacked)ToggleSetStacked (not $ isArea state.chartType)
-  , boolChartInput Rc.chartDetailParam "If smooth"
+  , boolChartInput CSS.chartDetailParam "If smooth"
       (_.smooth) ToggleSetSmooth (not $ isArea state.chartType)
   ]
   where
@@ -315,6 +315,8 @@ cardEval = case _ of
         Bar | not $ F.any isSelected rawConfig.measures → Nothing
         Line | not $ F.any isSelected rawConfig.dimensions → Nothing
         Line | not $ F.any isSelected rawConfig.measures → Nothing
+        Area | not $ F.any isSelected rawConfig.dimensions → Nothing
+        Area | not $ F.any isSelected rawConfig.measures → Nothing
         _ → Just rawConfig
 
     pure ∘ k $ Card.ChartOptions
@@ -437,24 +439,24 @@ configure = void do
        , aggregations: [firstAggregation, secondAggregation]
        }
 
-  areaConfiguration ∷ AxisAccum → ChartConfiguration → ChartConfiguration
-  areaConfiguration axises current =
-    let allAxises = (axises.category ⊕ axises.time ⊕ axises.value)
+  areaConfiguration ∷ Axes → ChartConfiguration → ChartConfiguration
+  areaConfiguration axes current =
+    let allAxises = (axes.category ⊕ axes.time ⊕ axes.value)
         dimensions =
           setPreviousValueFrom (index current.dimensions 0)
-          $ autoSelect $ newSelect $ dependsOnArr axises.value
+          $ autoSelect $ newSelect $ dependsOnArr axes.value
           -- This is redundant, I've put it here to notify
           -- that this behaviour differs from pieBar and can be changed.
           $ allAxises
         firstMeasures =
           setPreviousValueFrom (index current.measures 0)
           $ autoSelect $ newSelect $ depends dimensions
-          $ axises.value ⊝ dimensions
+          $ axes.value ⊝ dimensions
         secondMeasures =
           setPreviousValueFrom (index current.measures 1)
           $ newSelect $ ifSelected [firstMeasures]
           $ depends dimensions
-          $ axises.value ⊝ firstMeasures ⊝ dimensions
+          $ axes.value ⊝ firstMeasures ⊝ dimensions
         firstSeries =
           setPreviousValueFrom (index current.series 0)
           $ newSelect $ ifSelected [dimensions] $ allAxises ⊝ dimensions
