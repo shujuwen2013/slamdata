@@ -77,6 +77,10 @@ eval ∷ AceConfig → CC.CardEvalQuery ~> DSL
 eval cfg (CC.EvalCard info output next) = do
   cfg.eval info
   pure next
+eval cfg (CC.Activate next) = do
+  mbEditor ← H.query unit $ H.request GetEditor
+  for_ (join mbEditor) $ H.fromEff ∘ Editor.focus
+  pure next
 eval cfg (CC.Save k) = do
   status ← H.gets _.status
   content ← fromMaybe "" <$> H.query unit (H.request GetText)
@@ -107,6 +111,8 @@ eval _ (CC.SetDimensions dims next) = do
   H.modify
     $ _levelOfDetails
     .~ if dims.width < 240.0 then Low else High
+  mbEditor ← H.query unit $ H.request GetEditor
+  for_ (join mbEditor) $ H.fromEff ∘ Editor.resize Nothing
   pure next
 eval _ (CC.ModelUpdated _ next) =
   pure next
@@ -132,7 +138,7 @@ render ∷ AceConfig → State → HTML
 render cfg state =
   HH.div_
     [ renderHighLOD cfg state
-    , renderLowLOD (CT.aceCardGlyph cfg.mode) id state.levelOfDetails
+    , renderLowLOD (CT.lightCardGlyph $ CT.Ace cfg.mode) id state.levelOfDetails
     ]
 
 renderHighLOD ∷ AceConfig → State → HTML

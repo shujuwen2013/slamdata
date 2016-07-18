@@ -22,6 +22,8 @@ module SlamData.Workspace.Component
 
 import SlamData.Prelude
 
+import Control.Monad.Aff.Bus as Bus
+import Control.Monad.Eff.Ref as Ref
 import Control.Monad.Maybe.Trans (MaybeT(..), runMaybeT)
 import Control.UI.Browser (setHref, locationObject)
 
@@ -39,7 +41,6 @@ import Halogen as H
 import Halogen.Component.ChildPath (injSlot, injQuery)
 import Halogen.Component.Opaque.Unsafe (opaqueState)
 import Halogen.Component.Utils.Throttled (throttledEventSource_)
-import Halogen.HTML.Core (ClassName, className)
 import Halogen.HTML.Events.Indexed as HE
 import Halogen.HTML.Indexed as HH
 import Halogen.HTML.Properties.Indexed as HP
@@ -49,7 +50,6 @@ import SlamData.Effects (Slam)
 import SlamData.FileSystem.Routing (parentURL)
 import SlamData.Header.Component as Header
 import SlamData.Quasar.Data as Quasar
-import SlamData.Render.CSS as Rc
 import SlamData.SignIn.Component as SignIn
 import SlamData.Workspace.Action as WA
 import SlamData.Workspace.AccessType as AT
@@ -58,7 +58,7 @@ import SlamData.Workspace.Card.Draftboard.Common as DBC
 import SlamData.Workspace.Card.Model as Card
 import SlamData.Workspace.Component.ChildSlot (ChildQuery, ChildSlot, ChildState, cpDeck, cpHeader)
 import SlamData.Workspace.Component.Query (QueryP, Query(..), fromWorkspace, fromDeck, toWorkspace, toDeck)
-import SlamData.Workspace.Component.State (State, _accessType, _initialDeckId, _loaded, _path, _version, _stateMode, _globalVarMap, initialState)
+import SlamData.Workspace.Component.State (State, _accessType, _initialDeckId, _loaded, _path, _version, _stateMode, initialState)
 import SlamData.Workspace.Deck.Common (wrappedDeck, defaultPosition)
 import SlamData.Workspace.Deck.Component as Deck
 import SlamData.Workspace.Deck.Component.Nested as DN
@@ -68,7 +68,7 @@ import SlamData.Workspace.Deck.Model as DM
 import SlamData.Workspace.Model as Model
 import SlamData.Workspace.Routing (mkWorkspaceHash)
 import SlamData.Workspace.StateMode (StateMode(..))
-import SlamData.Workspace.Wiring (Wiring, getDeck, putDeck)
+import SlamData.Workspace.Wiring (Wiring, DeckMessage(..), putDeck, getDeck)
 
 import Utils.Path as UP
 import Utils.DOM (onResize)
@@ -90,14 +90,16 @@ comp wiring =
 render ∷ Wiring → State → WorkspaceHTML
 render wiring state =
   HH.div
-    [ HP.classes classes
+    [ HP.classes
+        $ (guard (AT.isReadOnly (state ^. _accessType)) $> HH.className "sd-published")
+        ⊕ [ HH.className "sd-workspace" ]
     , HE.onClick (HE.input_ DismissAll)
     ]
     $ header ⊕ deck
   where
   header ∷ Array WorkspaceHTML
   header = do
-    guard (not shouldHideTopMenu)
+    guard $ AT.isEditable (state ^. _accessType)
     pure $ HH.slot' cpHeader unit \_→
       { component: Header.comp
       , initialState: H.parentState Header.initialState
@@ -107,22 +109,14 @@ render wiring state =
   deck =
     pure case state.stateMode, state.path, state.initialDeckId of
       Loading, _, _ →
-        HH.div [ HP.classes [ workspaceClass ] ]
-          []
+        HH.div_ []
       Error err, _, _→ showError err
       _, Just path, Just deckId →
-        HH.div [ HP.classes [ workspaceClass ] ]
-          [ HH.slot' cpDeck unit \_ →
-             let
-               init =
-                 opaqueState $
-                   (Deck.initialDeck path deckId)
-                     { globalVarMap = state.globalVarMap
-                     }
-              in { component: DN.comp (deckOpts path deckId) init
-                 , initialState: DN.initialState
-                 }
-          ]
+        HH.slot' cpDeck unit \_ →
+          let init = opaqueState $ Deck.initialDeck path deckId
+          in { component: DN.comp (deckOpts path deckId) init
+             , initialState: DN.initialState
+             }
       _, Nothing, _ → showError "Missing workspace path"
       _, _, Nothing → showError "Missing deck id (impossible!)"
 
@@ -140,24 +134,6 @@ render wiring state =
           [ HH.text err ]
       ]
 
-  shouldHideTopMenu ∷ Boolean
-  shouldHideTopMenu = AT.isReadOnly (state ^. _accessType)
-
-  shouldHideEditors ∷ Boolean
-  shouldHideEditors = AT.isReadOnly (state ^. _accessType)
-
-  classes ∷ Array ClassName
-  classes =
-    if shouldHideEditors
-      then [ Rc.workspaceViewHack ]
-      else [ Rc.dashboard ]
-
-  workspaceClass ∷ ClassName
-  workspaceClass =
-    if shouldHideTopMenu
-      then className "sd-workspace-hidden-top-menu"
-      else className "sd-workspace"
-
 eval ∷ Wiring → Natural Query WorkspaceDSL
 eval _ (Init next) = do
   deckId ← H.fromEff freshDeckId
@@ -166,9 +142,11 @@ eval _ (Init next) = do
     $ throttledEventSource_ (Milliseconds 100.0) onResize
     $ pure (H.action Resize)
   pure next
-eval _ (SetGlobalVarMap varMap next) = do
-  H.modify (_globalVarMap .~ varMap)
-  queryDeck $ H.action $ Deck.SetGlobalVarMap varMap
+eval wiring (SetVarMaps urlVarMaps next) = do
+  currVarMaps ← H.fromEff $ Ref.readRef wiring.urlVarMaps
+  when (currVarMaps /= urlVarMaps) do
+    H.fromEff $ Ref.writeRef wiring.urlVarMaps urlVarMaps
+    H.fromAff $ Bus.write URLVarMapsUpdated wiring.messaging
   pure next
 eval _ (DismissAll next) = do
   querySignIn $ H.action SignIn.DismissSubmenu
@@ -236,9 +214,10 @@ peek wiring = ((const $ pure unit) ⨁ peekDeck) ⨁ (const $ pure unit)
           getDeck path deckId wiring.decks >>= traverse_ \parentDeck → void do
             let cards = DBC.replacePointer oldId newId cardId parentDeck.cards
             putDeck path deckId (parentDeck { cards = cards }) wiring.decks
-          let deckHash = mkWorkspaceHash (Deck.deckPath' path newId) (WA.Load state.accessType) state.globalVarMap
+          varMaps ← H.fromEff $ Ref.readRef wiring.urlVarMaps
+          let deckHash = mkWorkspaceHash (Deck.deckPath' path newId) (WA.Load state.accessType) varMaps
           H.fromEff $ locationObject >>= Location.setHash deckHash
-        Nothing -> do
+        Nothing → do
           let index = path </> Pathy.file "index"
           void $ Model.setRoot index newId
 
@@ -308,11 +287,10 @@ peek wiring = ((const $ pure unit) ⨁ peekDeck) ⨁ (const $ pure unit)
         putDeck path newIdMirror mirrored wiring.decks
       else do
         let
-          mirrored ∷ DM.Deck -- Needed because of some sort of constraint-generalization bug?
           mirrored = oldModel
             { parent = parentRef
             , mirror = oldModel.mirror <> map (Tuple newIdShared ∘ _.cardId) oldModel.cards
-            , cards = mempty
+            , cards = []
             , name = oldModel.name
             }
         putDeck path oldId mirrored wiring.decks
@@ -327,7 +305,8 @@ peek wiring = ((const $ pure unit) ⨁ peekDeck) ⨁ (const $ pure unit)
           for_ cards (DBC.unsafeUpdateCachedDraftboard wiring deckId)
       Nothing →
         void $ Model.setRoot index newIdParent
-    let deckHash = mkWorkspaceHash (Deck.deckPath' path newIdParent) (WA.Load state.accessType) state.globalVarMap
+    varMaps ← H.fromEff $ Ref.readRef wiring.urlVarMaps
+    let deckHash = mkWorkspaceHash (Deck.deckPath' path newIdParent) (WA.Load state.accessType) varMaps
     H.fromEff $ locationObject >>= Location.setHash deckHash
 
   peekDeck _ = pure unit

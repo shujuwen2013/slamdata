@@ -327,7 +327,7 @@ mkSeries needTwoAxis (Tuple ty interval_) lData stacked smooth =
       L.fromList $
       (map firstSerie $ zip (range 0 ((length (M.toList firsts))-1)) (M.toList firsts))
       <> (if needTwoAxis
-          then map secondSerie $ zip (range ((length (M.toList seconds))-1) 0) (M.toList seconds)
+          then map secondSerie $ zip (range 0 ((length (M.toList seconds))-1)) (M.toList seconds)
           else Nil
          )
 
@@ -367,20 +367,29 @@ mkSeries needTwoAxis (Tuple ty interval_) lData stacked smooth =
     EC.LineSeries 
       { common: EC.universalSeriesDefault 
         { name = if name ≡ "" 
-                 then Nothing 
-                 else if needTwoAxis 
+                 then if needTwoAxis 
                       then if ix ≡ 0.0 
+                           then Just $ "Left" 
+                           else Just $ "Right"
+                      else Nothing
+                 else if needTwoAxis 
+                      then if ix ≡ 0.0
                            then Just $ "Left: " <> name 
                            else Just $ "Right: " <> name
                       else Just name
         , itemStyle = Just $ EC.ItemStyle EC.itemStyleDefault 
             { normal = Just $ EC.IStyle EC.istyleDefault 
-              { color = Just $ EC.SimpleColor $ 
-                  (fromMaybe "#000000" (colors !! (mod ind (A.length colors))))
+              { color = Just $ EC.SimpleColor $
+                  fromMaybe "#000000" $ colors !! 
+                    ( (Int.round ix) * ((A.length colors)-1) + 
+                        (1-2*(Int.round ix)) * (mod ind (A.length colors)) )            
               , lineStyle = Just $ EC.LineStyle EC.lineStyleDefault 
                   { width = Just 2.0 }
               , areaStyle = Just $ EC.AreaStyle $ toRGBAString $ getShadeColor
-                  (fromMaybe "#000000" (colors !! (mod ind (A.length colors))))
+                  (fromMaybe "#000000" $ colors !! 
+                    ( (Int.round ix) * ((A.length colors)-1) + 
+                        (1-2*(Int.round ix)) * (mod ind (A.length colors)) )            
+                  )
                   (if stacked then 1.0 else 0.5)
               }     
             }

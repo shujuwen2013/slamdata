@@ -29,6 +29,7 @@ module SlamData.Workspace.Card.Eval.CardEvalT
 
 import SlamData.Prelude
 
+import Data.Map as Map
 import Data.Path.Pathy ((</>))
 import Data.Path.Pathy as Path
 import Data.Set as Set
@@ -40,7 +41,6 @@ import Control.Monad.Writer.Trans as WT
 
 import SlamData.Workspace.Card.CardId as CID
 import SlamData.Workspace.Card.Port as Port
-import SlamData.Workspace.Card.Port.VarMap as VM
 import SlamData.Workspace.Deck.DeckId as DID
 import SlamData.Workspace.Deck.AdditionalSource (AdditionalSource(..))
 
@@ -51,7 +51,7 @@ type CardEvalInput =
   { path ∷ DirPath
   , input ∷ Maybe Port.Port
   , cardCoord ∷ DID.DeckId × CID.CardId
-  , globalVarMap ∷ VM.VarMap
+  , urlVarMaps ∷ Map.Map DID.DeckId Port.URLVarMap
   }
 
 type CardEvalTP m = ET.ExceptT String (WT.WriterT (Set.Set AdditionalSource) m)
@@ -144,17 +144,7 @@ temporaryOutputResource ∷
   . { path ∷ DirPath, cardCoord ∷ DID.DeckId × CID.CardId | r }
   → FilePath
 temporaryOutputResource { path, cardCoord = deckId × cardId } =
-  outputDirectory </> outputFile
-
-  where
-  outputRoot =
-    if path ≡ Path.rootDir
-      then Path.rootDir </> Path.dir ".tmp"
-      else path
-
-  outputDirectory =
-    outputRoot </> Path.dir (DID.deckIdToString deckId)
-
-  outputFile =
-    Path.file $
-      "out" ⊕ CID.cardIdToString cardId
+  path
+    </> Path.dir ".tmp"
+    </> Path.dir (DID.deckIdToString deckId)
+    </> Path.file ("out" ⊕ CID.cardIdToString cardId)

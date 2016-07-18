@@ -18,6 +18,8 @@ module SlamData.Workspace.Deck.Component.State
   ( StateP
   , State
   , DisplayMode(..)
+  , ResponsiveSize(..)
+  , Fade(..)
   , CardDef
   , initialDeck
   , _id
@@ -29,7 +31,6 @@ module SlamData.Workspace.Deck.Component.State
   , _path
   , _saveTrigger
   , _runTrigger
-  , _globalVarMap
   , _pendingCard
   , _stateMode
   , _displayMode
@@ -43,6 +44,8 @@ module SlamData.Workspace.Deck.Component.State
   , _breakers
   , _focused
   , _additionalSources
+  , _responsiveSize
+  , _fadeTransition
   , addCard
   , addCard'
   , removeCard
@@ -78,7 +81,6 @@ import Data.Lens as Lens
 import Data.Ord (max)
 import Data.Path.Pathy ((</>))
 import Data.Path.Pathy as P
-import Data.StrMap as SM
 import Data.Set as Set
 import Data.Map as Map
 
@@ -91,7 +93,6 @@ import SlamData.Workspace.Card.CardId (CardId(..))
 import SlamData.Workspace.Card.CardId as CID
 import SlamData.Workspace.Card.CardType as CT
 import SlamData.Workspace.Card.Model as Card
-import SlamData.Workspace.Card.Port.VarMap as Port
 
 import SlamData.Workspace.Deck.Component.Query (Query)
 import SlamData.Workspace.Deck.DeckId (DeckId, deckIdToString)
@@ -109,7 +110,20 @@ data DisplayMode
   | Backside
   | Dialog
 
+data ResponsiveSize
+  = XSmall
+  | Small
+  | Medium
+  | Large
+  | XLarge
+  | XXLarge
+
 derive instance eqDisplayMode ∷ Eq DisplayMode
+
+data Fade
+  = FadeNone
+  | FadeIn
+  | FadeOut
 
 -- | The deck state. See the corresponding lenses for descriptions of
 -- | the fields.
@@ -126,7 +140,6 @@ type State =
   , saveTrigger ∷ Maybe (DebounceTrigger Query Slam)
   , runTrigger ∷ Maybe (DebounceTrigger Query Slam)
   , pendingCard ∷ Maybe (DeckId × CardId)
-  , globalVarMap ∷ Port.VarMap
   , stateMode ∷ StateMode
   , displayMode ∷ DisplayMode
   , initialSliderX ∷ Maybe Number
@@ -141,6 +154,8 @@ type State =
   , finalized ∷ Boolean
   , deckElement ∷ Maybe HTMLElement
   , additionalSources ∷ Map.Map (DeckId × CardId) (Set.Set AdditionalSource)
+  , responsiveSize ∷ ResponsiveSize
+  , fadeTransition ∷ Fade
   }
 
 -- | A record used to represent card definitions in the deck.
@@ -159,7 +174,6 @@ initialDeck path deckId =
   , activeCardIndex: Nothing
   , path
   , saveTrigger: Nothing
-  , globalVarMap: SM.empty
   , runTrigger: Nothing
   , pendingCard: Nothing
   , stateMode: Loading
@@ -176,6 +190,8 @@ initialDeck path deckId =
   , finalized: false
   , deckElement: Nothing
   , additionalSources: mempty
+  , responsiveSize: XLarge
+  , fadeTransition: FadeNone
   }
 
 -- | The unique identifier of the deck.
@@ -219,10 +235,6 @@ _saveTrigger = lens _.saveTrigger _{saveTrigger = _}
 -- | The debounced trigger for running all cards that are pending.
 _runTrigger ∷ ∀ a r. LensP {runTrigger ∷ a|r} a
 _runTrigger = lens _.runTrigger _{runTrigger = _}
-
--- | The global `VarMap`, passed through to the deck via the URL.
-_globalVarMap ∷ ∀ a r. LensP {globalVarMap ∷ a |r} a
-_globalVarMap = lens _.globalVarMap _{globalVarMap = _}
 
 -- | The earliest card in the deck that needs to evaluate.
 _pendingCard ∷ ∀ a r. LensP {pendingCard ∷ a|r} a
@@ -278,6 +290,12 @@ _level = lens _.level _{level = _}
 _focused ∷ ∀ a r. LensP {focused ∷ a|r} a
 _focused = lens _.focused _{focused = _}
 
+_responsiveSize ∷ ∀ a r. LensP {responsiveSize ∷ a|r} a
+_responsiveSize = lens _.responsiveSize _{responsiveSize = _}
+
+_fadeTransition ∷ ∀ a r. LensP {fadeTransition ∷ a|r} a
+_fadeTransition = lens _.fadeTransition _{fadeTransition = _}
+
 addCard ∷ Card.AnyCardModel → State → State
 addCard card st = fst $ addCard' card st
 
@@ -321,13 +339,12 @@ findLastCardType ∷ State → Maybe CT.CardType
 findLastCardType { displayCards } = Card.modelCardType ∘ _.model ∘ snd <$> A.last displayCards
 
 variablesCards ∷ State → Array (DeckId × CardId)
-variablesCards =
-  _.modelCards ⋙ A.mapMaybe cardTypeMatches ⋙ foldMap pure
+variablesCards = A.mapMaybe cardTypeMatches ∘ _.modelCards
   where
   cardTypeMatches (deckId × { cardId, model }) =
-    if Card.modelCardType model ≡ CT.Variables
-       then Just (deckId × cardId)
-       else Nothing
+    case Card.modelCardType model of
+      CT.Variables → Just (deckId × cardId)
+      _ → Nothing
 
 -- | Updates the stored card that is pending to run. This handles the logic of
 -- | changing the pending card when a provided card appears earlier in the deck
@@ -376,7 +393,6 @@ fromModel { path, id: deckId, parent, modelCards, name } state =
     , displayMode = Normal
     , displayCards = mempty
     , fresh = fresh
-    , globalVarMap = SM.empty
     , initialSliderX = Nothing
     , runTrigger = Nothing
     , pendingCard = Nothing

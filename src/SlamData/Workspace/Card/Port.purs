@@ -34,17 +34,23 @@ module SlamData.Workspace.Card.Port
 import SlamData.Prelude
 
 import Data.Lens (PrismP, prism', TraversalP, wander)
-import SlamData.Workspace.Card.Port.VarMap (VarMap, VarMapValue(..), parseVarMapValue, renderVarMapValue, emptyVarMap)
+import Data.Set as Set
+
+import SlamData.Workspace.Card.Port.VarMap (VarMap, URLVarMap, VarMapValue(..), parseVarMapValue, renderVarMapValue, emptyVarMap)
 import SlamData.Workspace.Card.Chart.BuildOptions (BuildOptions)
 import SlamData.Workspace.Card.Chart.ChartConfiguration (ChartConfiguration)
+import SlamData.Workspace.Card.Chart.ChartType (ChartType)
+import SlamData.Workspace.Card.Chart.Axis (Axes)
 import SlamData.Download.Model (DownloadOptions)
 import Text.Markdown.SlamDown as SD
 import Utils.Path as PU
 
 type ChartPort =
   { options ∷ BuildOptions
-  , chartConfig ∷ ChartConfiguration
+  , chartConfig ∷ Maybe ChartConfiguration
   , resource ∷ PU.FilePath
+  , availableChartTypes ∷ Set.Set ChartType
+  , axes ∷ Axes
   }
 
 type DownloadPort =
@@ -59,7 +65,7 @@ type TaggedResourcePort =
   }
 
 data Port
-  = SlamDown (SD.SlamDownP VarMapValue)
+  = SlamDown (VarMap × (SD.SlamDownP VarMapValue))
   | VarMap VarMap
   | CardError String
   | Chart ChartPort
@@ -80,15 +86,16 @@ instance showPort ∷ Show Port where
       Draftboard → "Draftboard"
       Blocked → "Blocked"
 
-_SlamDown ∷ PrismP Port (SD.SlamDownP VarMapValue)
-_SlamDown = prism' SlamDown \p → case p of
-  SlamDown x → Just x
-  _ → Nothing
+_SlamDown ∷ TraversalP Port (SD.SlamDownP VarMapValue)
+_SlamDown = wander \f s → case s of
+  SlamDown (vm × sd) → SlamDown ∘ (vm × _) <$> f sd
+  _ → pure s
 
-_VarMap ∷ PrismP Port VarMap
-_VarMap = prism' VarMap \p → case p of
-  VarMap x → Just x
-  _ → Nothing
+_VarMap ∷ TraversalP Port VarMap
+_VarMap = wander \f s → case s of
+  VarMap x → VarMap <$> f x
+  SlamDown (vm × sd) → SlamDown ∘ (_ × sd) <$> f vm
+  _ → pure s
 
 _CardError ∷ PrismP Port String
 _CardError = prism' CardError \p → case p of

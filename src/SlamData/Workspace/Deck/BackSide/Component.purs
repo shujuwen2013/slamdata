@@ -18,7 +18,6 @@ module SlamData.Workspace.Deck.BackSide.Component where
 
 import SlamData.Prelude
 
-import Data.Array as Arr
 import Data.Foldable as F
 import Data.String as Str
 import Data.Map as Map
@@ -116,19 +115,6 @@ labelAction = case _ of
   Unwrap _ → "Collapse board"
   Unshare → "Unshare deck"
 
-keywordsAction ∷ BackAction → Array String
-keywordsAction = case _ of
-  Trash → ["remove", "delete", "trash"]
-  Rename → ["rename", "title"]
-  Share → ["share"]
-  Embed → ["embed"]
-  Publish → ["publish", "presentation", "view"]
-  DeleteDeck → ["remove", "delete", "trash"]
-  Mirror → ["mirror", "copy", "duplicate", "shallow"]
-  Wrap → ["wrap", "pin", "card"]
-  Unwrap _ → ["collapse", "unwrap", "breakout", "remove", "merge"]
-  Unshare → ["unshare", "manage"]
-
 actionEnabled ∷ State → BackAction → Boolean
 actionEnabled st a =
   case st.activeCardType, a of
@@ -141,16 +127,16 @@ actionEnabled st a =
 
 actionGlyph ∷ BackAction → HTML
 actionGlyph = case _ of
-  Trash → glyph B.glyphiconTrash
-  Rename → glyph B.glyphiconPencil
-  Share → glyph B.glyphiconShare
-  Unshare → glyph B.glyphiconWrench
-  Embed → glyph B.glyphiconShareAlt
-  Publish → glyph B.glyphiconBlackboard
-  Mirror → glyph B.glyphiconDuplicate
-  Wrap → glyph B.glyphiconLogIn
-  Unwrap _ → glyph B.glyphiconLogOut
-  DeleteDeck → HH.i [ HP.classes [ Rc.actionIcon, Rc.deleteDeckIcon ] ] [ ]
+  Trash → HH.img [ HP.src "img/cardAndDeckActions/deleteCard.svg" ]
+  Rename → HH.img [ HP.src "img/cardAndDeckActions/renameDeck.svg" ]
+  Share → HH.img [ HP.src "img/cardAndDeckActions/shareDeck.svg" ]
+  Unshare → HH.img [ HP.src "img/cardAndDeckActions/unshareDeck.svg" ]
+  Embed → HH.img [ HP.src "img/cardAndDeckActions/embedDeck.svg" ]
+  Publish → HH.img [ HP.src "img/cardAndDeckActions/publishDeck.svg" ]
+  Mirror → HH.img [ HP.src "img/cardAndDeckActions/mirrorDeck.svg" ]
+  Wrap → HH.img [ HP.src "img/cardAndDeckActions/wrapDeck.svg" ]
+  Unwrap _ → HH.img [ HP.src "img/cardAndDeckActions/unwrapDeck.svg" ]
+  DeleteDeck → HH.img [ HP.src "img/cardAndDeckActions/deleteDeck.svg" ]
 
 type HTML = H.ComponentHTML Query
 type DSL = H.ComponentDSL State Query Slam
@@ -166,52 +152,40 @@ comp =
 
 render ∷ State → HTML
 render state =
-  HH.div
-    [ HP.class_ CCSS.deckCard ]
+  -- Extra div for consistent targetting with next action card styles
+  HH.div_
     [ HH.div
-        [ HP.class_ Rc.deckBackSide ]
-        [ HH.div_
-            [ HH.form_
-                [ HH.div_
-                    [ HH.input
-                        [ HP.value state.filterString
-                        , HE.onValueInput (HE.input UpdateFilter)
-                        , ARIA.label "Filter actions"
-                        , HP.placeholder "Filter actions"
+        [ HP.class_ CCSS.deckCard ]
+        [ HH.div
+            [ HP.class_ Rc.deckBackSide ]
+            [ HH.div_
+                [ HH.form_
+                    [ HH.div_
+                        [ HH.input
+                            [ HP.value state.filterString
+                            , HE.onValueInput (HE.input UpdateFilter)
+                            , ARIA.label "Filter deck and card actions"
+                            , HP.placeholder "Filter actions"
+                            ]
+                        , HH.button
+                            [ HP.buttonType HP.ButtonButton
+                            , HE.onClick (HE.input_ (UpdateFilter ""))
+                            ]
+                            [ glyph B.glyphiconRemove ]
                         ]
-                    , HH.button
-                          [ HP.buttonType HP.ButtonButton ]
-                          [ glyph B.glyphiconRemove ]
                     ]
+                , HH.ul_ $ map backsideAction (allBackActions state)
                 ]
-            , HH.ul_
-                $ map (backsideAction true) actions.enabledActions
-                ⊕ map (backsideAction false) actions.disabledActions
             ]
         ]
     ]
   where
 
-  actions ∷ {enabledActions ∷ Array BackAction, disabledActions ∷ Array BackAction}
-  actions =
-    foldl
-      (\{enabledActions, disabledActions} action →
-         if backActionConforms action
-           then { enabledActions: Arr.snoc enabledActions action, disabledActions }
-           else { enabledActions, disabledActions: Arr.snoc disabledActions action }
-      )
-      {enabledActions: [], disabledActions: []}
-      (allBackActions state)
+  filterString ∷ String
+  filterString = Str.toLower state.filterString
 
-  backActionConforms ∷ BackAction → Boolean
-  backActionConforms ba =
-    actionEnabled state ba &&
-      F.any
-        (isJust ∘ Str.stripPrefix (Str.trim $ Str.toLower state.filterString))
-        (keywordsAction ba)
-
-  backsideAction ∷ Boolean → BackAction → HTML
-  backsideAction enabled action =
+  backsideAction ∷ BackAction → HTML
+  backsideAction action =
     HH.li_
       [ HH.button attrs
           [ icon
@@ -226,6 +200,7 @@ render state =
         , HP.buttonType HP.ButtonButton
         ] ⊕ if enabled then [ HE.onClick (HE.input_ (DoAction action)) ] else [ ]
 
+      enabled = Str.contains filterString (Str.toLower $ labelAction action)
       lbl = labelAction action ⊕ if enabled then "" else " disabled"
       icon = actionGlyph action
 

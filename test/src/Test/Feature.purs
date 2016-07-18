@@ -27,9 +27,7 @@ module Test.Feature
   , hoverWithProperties
   , pressEnter
   , provideFieldValue
-  , provideFieldValueUntilExpectedValue
   , provideFieldValueWithProperties
-  , provideFieldValueWithPropertiesUntilExpectedValue
   , provideFileInputValue
   , provideFileInputValueWithProperties
   , pushRadioButton
@@ -40,6 +38,7 @@ module Test.Feature
   , uncheck
   , uncheckWithProperties
   , smallWaitTime
+  , logCurrentScreen
   ) where
 
 import SlamData.Prelude
@@ -68,6 +67,7 @@ import Selenium.Monad as Selenium
 import Selenium.Types (Element, Location)
 
 import Test.Feature.ActionSequence as FeatureSequence
+import Test.Feature.Log (warnMsg)
 import Test.Feature.Monad (Feature, await)
 import Test.Utils (ifTrue, ifFalse, passover, throwIfEmpty, throwIfNotEmpty, singletonValue, appendToCwd, nonWhite)
 
@@ -534,7 +534,7 @@ clearWithProperties
   → XPath
   → Feature eff o Unit
 clearWithProperties properties xPath =
-  Selenium.clearEl =<< findWithProperties properties xPath
+  tryRepeatedlyTo $ Selenium.clearEl =<< findWithPropertiesNotRepeatedly properties xPath
 
 checkWithProperties'
   ∷ ∀ eff o
@@ -543,7 +543,7 @@ checkWithProperties'
   → XPath
   → Feature eff o Unit
 checkWithProperties' checked properties xPath =
-  (traverse_ clickEl) =<< findAtLeastOneWithProperties properties' xPath
+  (traverse_ clickEl) =<< findAtLeastOneWithPropertiesNotRepeatedly properties' xPath
   where
   properties' = updateProperty "checked" checked properties
 
@@ -574,45 +574,13 @@ provideFieldValueWithProperties
   → String
   → Feature eff o Unit
 provideFieldValueWithProperties properties xPath value =
-  tryRepeatedlyTo $ provideFieldValueElement value =<< findWithProperties properties xPath
-
--- | Repeatedly provide the first value for the text or number field found with the
--- | provided XPath until the field has the second value.
-provideFieldValueUntilExpectedValue
-  ∷ ∀ eff o
-  .  String
-  → XPath
-  → String
-  → Feature eff o Unit
-provideFieldValueUntilExpectedValue expectedValue xPath value =
-  provideFieldValueWithPropertiesUntilExpectedValue Map.empty expectedValue xPath value
-
--- | Repeatedly provide the first value for the text or number field with the
--- | provided properties found with the provided XPath until the field has the
--- | second value.
-provideFieldValueWithPropertiesUntilExpectedValue
-  ∷ ∀ eff o
-  . Properties
-  → String
-  → XPath
-  → String
-  → Feature eff o Unit
-provideFieldValueWithPropertiesUntilExpectedValue properties expectedValue xPath value  =
-  tryRepeatedlyTo $ action *> (later smallWaitTime expectation)
-  where
-  action =
-    provideFieldValueElement value
-      =<< findWithPropertiesNotRepeatedly properties xPath
-  expectation =
-    expectPresentedWithPropertiesNotRepeatedly
-      (updateProperty "value" (Just expectedValue) properties)
-      xPath
+  tryRepeatedlyTo $ provideFieldValueElement value =<< findWithPropertiesNotRepeatedly properties xPath
 
 -- | Select option with the provided text from the select node with the provided
 -- | attributes or properties found with the provided XPath.
 selectFromDropdownWithProperties ∷ ∀ eff o. Properties → XPath → String → Feature eff o Unit
 selectFromDropdownWithProperties properties xPath text =
-  tryRepeatedlyTo $ selectFromDropdownElement text =<< findWithProperties properties xPath
+  tryRepeatedlyTo $ selectFromDropdownElement text =<< findWithPropertiesNotRepeatedly properties xPath
 
 clickWithPropertiesNotRepeatedly
   ∷ ∀ eff o
@@ -630,16 +598,16 @@ clickWithProperties
   . Properties
   → XPath
   → Feature eff o Unit
-clickWithProperties properties =
-  tryRepeatedlyTo ∘ clickEl <=< findWithProperties properties
+clickWithProperties properties xPath =
+  tryRepeatedlyTo $ clickEl =<< findWithPropertiesNotRepeatedly properties xPath
 
 -- | Click all nodes with the provided properties or attributes found with the
 -- | provided XPath.
 clickAllWithProperties ∷ ∀ eff o. Properties → XPath → Feature eff o Unit
-clickAllWithProperties properties =
+clickAllWithProperties properties xPath =
   tryRepeatedlyTo
-    ∘ (traverse_ clickEl)
-    <=< findAtLeastOneWithProperties properties
+    $ (traverse_ clickEl)
+    =<< findAtLeastOneWithPropertiesNotRepeatedly properties xPath
 
 -- | Drag node with the first provided properties or attributes found with the first
 -- | provided XPath to the node with the second provided properties or attributes found with
@@ -673,8 +641,8 @@ dragAndDropWithProperties fromProperties fromXPath toProperties toXPath =
 -- | Hover over the node with the provided properties or attributes found with
 -- | the provided XPath.
 hoverWithProperties ∷ ∀ eff o. Properties → XPath → Feature eff o Unit
-hoverWithProperties properties =
-  tryRepeatedlyTo ∘ hoverElement <=< findWithProperties properties
+hoverWithProperties properties xPath =
+  tryRepeatedlyTo $ hoverElement =<< findWithPropertiesNotRepeatedly properties xPath
 
 -- | Provide file input value to the file input with the provided attributes or
 -- | properties found with the provided XPath.
@@ -690,9 +658,9 @@ provideFileInputValueWithProperties properties xPath filePath =
 -- | function allows feature tests to access such URLs.
 accessUrlFromFieldValueWithProperties ∷ ∀ eff o. Properties → XPath → Feature eff o Unit
 accessUrlFromFieldValueWithProperties properties xPath =
-  get =<< maybe throwNullValueError pure =<< getValue =<< findField
+  tryRepeatedlyTo $ get =<< maybe throwNullValueError pure =<< getValue =<< findField
   where
-  findField = findWithProperties properties xPath
+  findField = findWithPropertiesNotRepeatedly properties xPath
   getValue = flip getAttribute "value"
   throwNullValueError = liftEff $ throw nullValueErrorMessage
   nullValueErrorMessage =
@@ -828,6 +796,13 @@ expectScreenshotOfElementToMatchAny diffPath maxPercent presentedPath expectedPa
     {percent} ← nonWhite diffPath
     pure $ percent < maxPercent
 
+logCurrentScreen ∷ ∀ eff o. Feature eff o Unit
+logCurrentScreen =
+  saveScreenshot path *> logScreenshot path
+  where
+  path = "current.png"
+  message = ("Screenshot taken now:\ndata:image/png;base64," ++ _)
+  logScreenshot p = (message <$> showImageFile p) >>= warnMsg
 
 -- File utilities
 showImageFile ∷ ∀ eff o. FilePath → Feature eff o String

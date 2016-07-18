@@ -54,7 +54,7 @@ import SlamData.Form.SelectPair.Component as P
 import SlamData.Workspace.Card.Chart.Aggregation (Aggregation(..), aggregationSelect, aggregationSelectWithNone)
 import SlamData.Workspace.Card.Chart.ChartType (ChartType(..))
 import SlamData.Workspace.Card.Chart.ChartConfiguration (JSelect, ChartConfiguration)
-import SlamData.Render.CSS as Rc
+import SlamData.Workspace.Card.ChartOptions.Form.Component.CSS as CSS
 
 data Query a
   = SetState (Tuple ChartType ChartConfiguration) a
@@ -125,9 +125,9 @@ formComponent = H.parentComponent { render, eval, peek: Nothing }
 render
   ∷ State
   → FormHTML
-render state = case state.chartType of
-  Scatter -> HH.div
-    [ HP.classes [ Rc.chartEditor ] ]
+render conf =
+  HH.div
+    [ HP.classes [ CSS.chartEditor ] ]
     $ fold
       [ foldMap (renderMeasure 0 aggregationSelectWithNone) (state.chartConfiguration.measures !! 0)
       , foldMap (renderMeasure 1 aggregationSelectWithNone) (state.chartConfiguration.measures !! 1)
@@ -161,7 +161,7 @@ render state = case state.chartType of
   renderDimension ix sel =
     [ HH.form
         [ CP.nonSubmit
-        , HP.classes [ Rc.chartConfigureForm, Rc.chartDimension ]
+        , HP.classes [ CSS.chartConfigureForm, CSS.chartDimension ]
         ]
         [ dimensionLabel
         , HH.slot' cpDimension ix \_ →
@@ -176,9 +176,9 @@ render state = case state.chartType of
     [ HH.form
         [ CP.nonSubmit
         , HP.classes
-            [ Rc.chartConfigureForm
-            , Rc.chartMeasureOne
-            , Rc.withAggregation
+            [ CSS.chartConfigureForm
+            , CSS.chartMeasureOne
+            , CSS.withAggregation
             ]
         ]
         [ measureLabel
@@ -194,8 +194,8 @@ render state = case state.chartType of
     [ HH.form
         [ CP.nonSubmit
         , HP.classes
-            [ Rc.chartConfigureForm
-            , Rc.chartSeriesOne
+            [ CSS.chartConfigureForm
+            , CSS.chartSeriesOne
             ]
         ]
       [ seriesLabel
@@ -211,8 +211,8 @@ render state = case state.chartType of
     [ HH.form
         [ CP.nonSubmit
         , HP.classes
-            [ Rc.chartConfigureForm
-            , Rc.chartCategory
+            [ CSS.chartConfigureForm
+            , CSS.chartCategory
             ]
         ]
         [ categoryLabel
@@ -230,13 +230,13 @@ render state = case state.chartType of
            , defaultWhen: (_ > 1)
            , mainState: sel
            , ariaLabel: renderLabel i "Measure"
-           , classes: [Rc.aggregation, B.btnPrimary]
+           , classes: [CSS.aggregation, B.btnPrimary]
            }
       else { disableWhen: (_ < 1)
            , defaultWhen: (const true)
            , mainState: sel
            , ariaLabel: renderLabel i "Measure"
-           , classes: [Rc.aggregation, B.btnPrimary]
+           , classes: [CSS.aggregation, B.btnPrimary]
            }
 
 

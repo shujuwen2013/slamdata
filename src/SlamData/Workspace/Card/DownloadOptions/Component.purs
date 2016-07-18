@@ -32,6 +32,7 @@ import SlamData.Download.Render as DLR
 import SlamData.Effects (Slam)
 import SlamData.Render.CSS as RC
 import SlamData.Workspace.Card.CardType (CardType(DownloadOptions))
+import SlamData.Workspace.Card.CardType as CT
 import SlamData.Workspace.Card.Component as CC
 import SlamData.Workspace.Card.Common.Render (renderLowLOD)
 import SlamData.Workspace.Card.DownloadOptions.Component.Query (QueryP, Query(..))
@@ -56,7 +57,7 @@ render ∷ State → HTML
 render state =
   HH.div_
     [ renderHighLOD state
-    , renderLowLOD B.glyphiconDownloadAlt left state.levelOfDetails
+    , renderLowLOD (CT.lightCardGlyph CT.DownloadOptions) left state.levelOfDetails
     ]
 
 renderHighLOD ∷ State → HTML
@@ -139,6 +140,8 @@ cardEval ∷ CC.CardEvalQuery ~> DSL
 cardEval = case _ of
   CC.EvalCard info output next → do
     H.modify $ _source .~ info.input ^? Lens._Just ∘ Port._Resource
+    pure next
+  CC.Activate next →
     pure next
   CC.Save k →
     map (k ∘ Card.DownloadOptions) H.get

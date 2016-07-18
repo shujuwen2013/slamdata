@@ -93,7 +93,7 @@ permissionsHeader
 permissionsHeader ps = do
   guard (not $ Arr.null ps)
   pure
-    $ RequestHeader "X-Extra-TokenHashs"
+    $ RequestHeader "X-Extra-Permisssions"
     $ Str.joinWith ","
     $ map runTokenHash ps
 
@@ -108,7 +108,7 @@ retrieveTokenHashes =
     <#> map TokenHash
   where
   permissionRegex :: Rgx.Regex
-  permissionRegex = Rgx.regex "permissionsToken=([^&]+)" Rgx.noFlags
+  permissionRegex = Rgx.regex "permissionTokens=([^&]+)" Rgx.noFlags
 
   extractTokenHashsString :: String -> Maybe String
   extractTokenHashsString str =
