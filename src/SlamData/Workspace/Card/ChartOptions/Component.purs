@@ -377,9 +377,9 @@ configure = void do
       $ H.query ty
       $ left (H.request Form.GetConfiguration)
 
-  setStateFor ∷ ChartType → ChartConfiguration → DSL Unit
-  setStateFor ty conf =
-    void $ H.query ty $ left $ H.action $ Form.SetState (Tuple ty conf)
+  setConfFor ∷ ChartType → ChartConfiguration → DSL Unit
+  setConfFor ty conf =
+    void $ H.query ty $ left $ H.action $ Form.SetConfiguration conf
 
   setPreviousValueFrom
     ∷ ∀ a. (Eq a) ⇒ Maybe (Select a) → Select a → Select a

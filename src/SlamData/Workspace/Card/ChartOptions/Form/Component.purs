@@ -129,16 +129,6 @@ render conf =
   HH.div
     [ HP.classes [ CSS.chartEditor ] ]
     $ fold
-      [ foldMap (renderMeasure 0 aggregationSelectWithNone) (state.chartConfiguration.measures !! 0)
-      , foldMap (renderMeasure 1 aggregationSelectWithNone) (state.chartConfiguration.measures !! 1)
-      , hr
-      , foldMap (renderSeries 0) (state.chartConfiguration.series !! 0)
-        ⊕ foldMap (renderSeries 1) (state.chartConfiguration.series !! 1)
-      , hr
-      ]
-  _ -> HH.div
-    [ HP.classes [ Rc.chartEditor ] ]
-    $ fold
       [ if null state.chartConfiguration.dimensions
           then foldMap (renderCategory 0) (state.chartConfiguration.series !! 0)
           else foldMap (renderDimension 0) (state.chartConfiguration.dimensions !! 0)

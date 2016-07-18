@@ -133,9 +133,6 @@ shareButton = className "share-button"
 aggregation ∷ ClassName
 aggregation = className "aggregation"
 
-scatterChartIcon ∷ ClassName
-scatterChartIcon = className "scatter-chart-icon"
-
 deleteDeckIcon ∷ ClassName
 deleteDeckIcon = className "delete-deck-icon"
 
