@@ -186,16 +186,24 @@ getShadeColor hex alpha =
         (fromHexString hex)) 
       0.95) 
     alpha
-  where
-  lightenTo :: Color → Number → Color
-  lightenTo col l' = hsla c.h c.s l' c.a
-    where
-    c = toHSLA col
 
-  setAlpha :: Color → Number → Color
-  setAlpha col a' = hsla c.h c.s c.l a'
-    where
-    c = toHSLA col 
+getTransparentColor ∷ String → Number → Color
+getTransparentColor hex alpha =
+  setAlpha  
+    (fromMaybe 
+      (hsla 0.0 0.0 0.0 1.0)  
+      (fromHexString hex))
+    alpha
+
+lightenTo ∷ Color → Number → Color
+lightenTo col l' = hsla c.h c.s l' c.a
+  where
+  c = toHSLA col
+
+setAlpha ∷ Color → Number → Color
+setAlpha col a' = hsla c.h c.s c.l a'
+  where
+  c = toHSLA col 
 
 toRGBAString ∷ Color → String
 toRGBAString col = "rgba(" <> show c.r <> ", "

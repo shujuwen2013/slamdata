@@ -125,8 +125,19 @@ formComponent = H.parentComponent { render, eval, peek: Nothing }
 render
   ∷ State
   → FormHTML
-render conf =
-  HH.div
+render state = case state.chartType of
+  Scatter → HH.div
+    [ HP.classes [ CSS.chartEditor ] ]
+    $ fold
+      [ foldMap (renderMeasure 0 aggregationSelectWithNone) (state.chartConfiguration.measures !! 0)
+      , foldMap (renderMeasure 1 aggregationSelectWithNone) (state.chartConfiguration.measures !! 1)
+      , foldMap (renderMeasure 2 aggregationSelectWithNone) (state.chartConfiguration.measures !! 2)
+      , hr
+      , foldMap (renderSeries 0) (state.chartConfiguration.series !! 0)
+        ⊕ foldMap (renderSeries 1) (state.chartConfiguration.series !! 1)
+      , hr
+      ]
+  _ -> HH.div
     [ HP.classes [ CSS.chartEditor ] ]
     $ fold
       [ if null state.chartConfiguration.dimensions
