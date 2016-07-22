@@ -48,10 +48,10 @@ import Halogen.HTML.Properties.Indexed as HP
 import Halogen.Themes.Bootstrap3 as B
 
 import SlamData.Effects (Slam)
-import SlamData.Form.Select (Select(..))
+import SlamData.Form.Select (Select)
 import SlamData.Form.Select.Component as S
 import SlamData.Form.SelectPair.Component as P
-import SlamData.Workspace.Card.Chart.Aggregation (Aggregation(..), aggregationSelect, aggregationSelectWithNone)
+import SlamData.Workspace.Card.Chart.Aggregation (Aggregation, aggregationSelect, aggregationSelectWithNone)
 import SlamData.Workspace.Card.Chart.ChartType (ChartType(..))
 import SlamData.Workspace.Card.Chart.ChartConfiguration (JSelect, ChartConfiguration)
 import SlamData.Workspace.Card.ChartOptions.Form.Component.CSS as CSS

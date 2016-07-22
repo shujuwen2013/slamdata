@@ -22,11 +22,8 @@ import Data.Argonaut (JCursor)
 import Data.Array ((!!), nub, length, range, index, sort, reverse, concat)
 import Data.Array as A
 import Data.Function (on)
-import Data.Int as Int
 import Data.List (List(..), zip, catMaybes, null, head, groupBy, sortBy,fromList, singleton)
 import Data.Map (Map)
-import Data.Tuple (fst, snd)
-import Data.Maybe (isJust)
 import Data.Maybe.Unsafe (fromJust)
 
 import ECharts as EC
@@ -34,7 +31,7 @@ import ECharts as EC
 import SlamData.Workspace.Card.Chart.Aggregation (Aggregation(..), runAggregation)
 import SlamData.Workspace.Card.Chart.Axis as Ax
 import SlamData.Workspace.Card.Chart.ChartConfiguration (ChartConfiguration)
-import SlamData.Workspace.Card.Chart.BuildOptions.Common (SeriesKey, ChartAxises, colors, mixAxisLabelAngleAndFontSize, buildChartAxises, keyName, toRGBAString, getTransparentColor)
+import SlamData.Workspace.Card.Chart.BuildOptions.Common (SeriesKey, ChartAxises, colors, buildChartAxises, keyName, toRGBAString, getTransparentColor)
 
 
 type ScatterData = Array (Tuple String (Array (Tuple (Array Number) (Maybe Number))))
@@ -96,6 +93,7 @@ scatterData axises = fromList $
           (keyName (Tuple "" a))
           (Tuple [fromJust v1, fromJust v2] v3)
         _ → Nothing
+  mkPoint (Tuple _ (Tuple _ _)) = Nothing
   
   seriesKeys ∷ List SeriesKey
   seriesKeys = case null firstSeries of
@@ -308,9 +306,13 @@ mkSeries sData bubbleMinSize bubbleMaxSize =
                else if r > bMax
                     then bMax
                     else r
+      -- default circle size 4.0
+      func1 _ = 4.0
 
       func2 ∷ Array Number → Number
       func2 [x, y, r] =
         bMin*(1.0-(r-rMin)/(rMax-rMin)) + bMax*(r-rMin)/(rMax-rMin)
+      -- default circle size 4.0
+      func2 _ = 4.0
 
        

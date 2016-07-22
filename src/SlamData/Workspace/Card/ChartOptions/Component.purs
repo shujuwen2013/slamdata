@@ -25,8 +25,7 @@ import Data.Lens as Lens
 import Data.Lens ((.~), (^?))
 import Data.List as L
 import Data.Set as Set
-import Data.Tuple
-import Global
+import Global (readFloat, isNaN)
 
 import CSS.Geometry (marginBottom)
 import CSS.Size (px)
