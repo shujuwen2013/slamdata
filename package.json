@@ -5,7 +5,7 @@
     "type": "git",
     "url": "https://github.com/slamdata/slamdata"
   },
-  "version": "v3.0.1",
+  "version": "v3.0.3",
   "contributors": [
     "Maxim Zimaliev <zimaliev@yandex.ru>",
     "Gary Burgess <gary@slamdata.com>",
@@ -16,6 +16,7 @@
     "clean": "gulp clean && rimraf .pulp-cache",
     "postinstall": "node script/get-quasar.js",
     "build": "gulp less make-bundle",
+    "build-lite": "gulp less bundle",
     "property-tests": "gulp bundle-property-tests && node tmp/js/property-tests",
     "test": "gulp bundle-test && node test",
     "psa": "pulp build -I test/src --censor-lib --strict --stash"
