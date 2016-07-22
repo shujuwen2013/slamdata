@@ -44,7 +44,9 @@ import Control.Monad.Eff.Ref (Ref, newRef)
 import Data.Map as Map
 import Data.Set as Set
 
+import SlamData.Analytics.Event as AE
 import SlamData.Effects (SlamDataEffects)
+import SlamData.Notification as N
 import SlamData.Quasar.Data as Quasar
 import SlamData.Workspace.Card.Model as Card
 import SlamData.Workspace.Card.CardId (CardId)
@@ -86,6 +88,8 @@ type Wiring =
   , cards ∷ Cache (DeckId × CardId) CardEval
   , pending ∷ Bus.BusRW PendingMessage
   , messaging ∷ Bus.BusRW DeckMessage
+  , notify ∷ Bus.BusRW N.NotificationOptions
+  , analytics ∷ Bus.BusRW AE.Event
   , urlVarMaps ∷ Ref (Map.Map DeckId Port.URLVarMap)
   }
 
@@ -99,8 +103,21 @@ makeWiring = fromAff do
   cards ← makeCache
   pending ← Bus.make
   messaging ← Bus.make
+  notify ← Bus.make
+  analytics ← Bus.make
   urlVarMaps ← fromEff (newRef mempty)
-  pure { decks, activeState, cards, pending, messaging, urlVarMaps }
+  let
+    wiring =
+      { decks
+      , activeState
+      , cards
+      , pending
+      , messaging
+      , notify
+      , analytics
+      , urlVarMaps
+      }
+  pure wiring
 
 makeCache
   ∷ ∀ m k v
@@ -115,7 +132,7 @@ putDeck
   → DeckId
   → Deck
   → Cache DeckId DeckRef
-  → m (Either String Deck)
+  → m (Either String Unit)
 putDeck path deckId deck cache = fromAff do
   ref ← defer do
     res ← Quasar.save (deckIndex path deckId) $ encode deck
@@ -123,7 +140,7 @@ putDeck path deckId deck cache = fromAff do
       modifyVar (Map.delete deckId) cache
     pure $ bimap message (const deck) res
   modifyVar (Map.insert deckId ref) cache
-  wait ref
+  rmap (const unit) <$> wait ref
 
 putDeck'
   ∷ ∀ m
