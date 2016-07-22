@@ -25,6 +25,8 @@ import Data.Lens as Lens
 import Data.Lens ((.~), (^?))
 import Data.List as L
 import Data.Set as Set
+import Data.Tuple
+import Global
 
 import CSS.Geometry (marginBottom)
 import CSS.Size (px)
@@ -43,10 +45,10 @@ import SlamData.Form.Select (Select, autoSelect, newSelect, (⊝), ifSelected, t
 import SlamData.Render.Common (row)
 import SlamData.Workspace.Card.CardType (CardType(ChartOptions))
 import SlamData.Workspace.Card.CardType as CT
-import SlamData.Workspace.Card.Chart.Aggregation (aggregationSelect)
+import SlamData.Workspace.Card.Chart.Aggregation (aggregationSelect, aggregationSelectWithNone)
 import SlamData.Workspace.Card.Chart.Axis (Axes)
 import SlamData.Workspace.Card.Chart.ChartConfiguration (ChartConfiguration, depends, dependsOnArr)
-import SlamData.Workspace.Card.Chart.ChartType (ChartType(..), isPie, isArea)
+import SlamData.Workspace.Card.Chart.ChartType (ChartType(..), isPie, isArea, isScatter)
 import SlamData.Workspace.Card.ChartOptions.Component.CSS as CSS
 import SlamData.Workspace.Card.ChartOptions.Component.Query (QueryC, Query(..))
 import SlamData.Workspace.Card.ChartOptions.Component.State as VCS
@@ -173,12 +175,14 @@ renderChartTypeSelector state =
   src Line = "img/line.svg"
   src Bar = "img/bar.svg"
   src Area = "img/area.svg"
+  src Scatter = "img/scatter.svg"
 
   cls ∷ ChartType → HH.ClassName
   cls Pie = CSS.pieChartIcon
   cls Line = CSS.lineChartIcon
   cls Bar = CSS.barChartIcon
   cls Area = CSS.areaChartIcon
+  cls Scatter = CSS.scatterChartIcon
 
 
 renderChartConfiguration ∷ VCS.State → HTML
@@ -189,6 +193,7 @@ renderChartConfiguration state =
     , renderTab Line
     , renderTab Bar
     , renderTab Area
+    , renderTab Scatter
     , renderDimensions state
     ]
   where
@@ -208,23 +213,31 @@ renderChartConfiguration state =
 renderDimensions ∷ VCS.State → HTML
 renderDimensions state =
   row
-  [ chartInput CSS.axisLabelParam "Axis label angle"
-      (_.axisLabelAngle ⋙ show) RotateAxisLabel (isPie state.chartType)
-  , chartInput CSS.axisLabelParam "Axis font size"
-      (_.axisLabelFontSize ⋙ show) SetAxisFontSize (isPie state.chartType)
+  [ intChartInput CSS.axisLabelParam "Axis label angle"
+      (_.axisLabelAngle ⋙ show) RotateAxisLabel 
+        (isPie state.chartType || isScatter state.chartType)
+  , intChartInput CSS.axisLabelParam "Axis font size"
+      (_.axisLabelFontSize ⋙ show) SetAxisFontSize 
+        (isPie state.chartType || isScatter state.chartType)
   , boolChartInput CSS.chartDetailParam "If stack"
-      (_.areaStacked)ToggleSetStacked (not $ isArea state.chartType)
+      (_.areaStacked) ToggleSetStacked (not $ isArea state.chartType)
   , boolChartInput CSS.chartDetailParam "If smooth"
       (_.smooth) ToggleSetSmooth (not $ isArea state.chartType)
+  , numChartInput CSS.axisLabelParam "Min size of circle"
+      (_.bubbleMinSize) 1 (_.bubbleMaxSize) SetBubbleMinSize 
+        (not $ isScatter state.chartType)
+  , numChartInput CSS.axisLabelParam "Max size of circle"
+      (_.bubbleMaxSize) 0 (_.bubbleMinSize) SetBubbleMaxSize 
+        (not $ isScatter state.chartType)
   ]
   where
-  chartInput
+  intChartInput
     ∷ HH.ClassName
     → String
     → (VCS.State → String)
     → (Int → Unit → Query Unit)
     → Boolean → HTML
-  chartInput cls labelText valueFromState queryCtor isHidden =
+  intChartInput cls labelText valueFromState queryCtor isHidden =
     HH.form
       [ HP.classes
           $ [ B.colXs6, cls ]
@@ -238,6 +251,33 @@ renderDimensions state =
           , ARIA.label labelText
           , HE.onValueInput
               $ pure ∘ map (right ∘ flip queryCtor unit) ∘ stringToInt
+          ]
+      ]
+
+  numChartInput
+    ∷ HH.ClassName
+    → String
+    → (VCS.State → Number)
+    -- 0: lower boundary; 1: upper boundary
+    → Int
+    → (VCS.State → Number)
+    → (Number → Unit → Query Unit)
+    → Boolean → HTML
+  numChartInput cls labelText getCurrentVal ind getBoudary queryCtor isHidden =
+    HH.form
+      [ HP.classes
+          $ [ B.colXs6, cls ]
+          ⊕ (guard isHidden $> B.hide)
+      , Cp.nonSubmit
+      ]
+      [ label labelText
+      , HH.input
+          [ HP.classes [ B.formControl ]
+          , HP.value $ show $ getCurrentVal state
+          , ARIA.label labelText
+          , HE.onValueChange
+              $ pure ∘ map (right ∘ flip queryCtor unit) ∘ 
+                stringToNum (getCurrentVal state) ind (getBoudary state)
           ]
       ]
   
@@ -273,6 +313,20 @@ renderDimensions state =
   stringToInt ∷ String → Maybe Int
   stringToInt s = if s ≡ "" then Just 0 else Int.fromString s
 
+  stringToNum ∷ Number → Int → Number → String → Maybe Number
+  stringToNum currentVal ind boundary s = 
+    if (isNaN $ readFloat s) || ((readFloat s) < 0.0)
+    then Just currentVal 
+    else case ind of
+      0 → if (readFloat s) < boundary
+          then Just boundary
+          else Just $ readFloat s
+      1 → if (readFloat s) > boundary
+          then Just boundary
+          else Just $ readFloat s
+      _ → Just $ readFloat s
+    
+
 -- Note: need to put running to state
 eval ∷ QueryC ~> DSL
 eval = coproduct cardEval chartEval
@@ -285,6 +339,8 @@ chartEval q = do
     SetAxisFontSize size n → H.modify (VCS._axisLabelFontSize .~ size) $> n
     ToggleSetStacked stacked n → H.modify (VCS._areaStacked .~ stacked) $> n
     ToggleSetSmooth smooth n → H.modify (VCS._smooth .~ smooth) $> n
+    SetBubbleMinSize bubbleMinSize n → H.modify (VCS._bubbleMinSize .~ bubbleMinSize) $> n
+    SetBubbleMaxSize bubbleMaxSize n → H.modify (VCS._bubbleMaxSize .~ bubbleMaxSize) $> n
   configure
   CC.raiseUpdatedP' CC.EvalModelUpdate
   pure next
@@ -310,7 +366,7 @@ cardEval = case _ of
     st ← H.get
     conf ← H.query st.chartType $ left $ H.request Form.GetConfiguration
     let
-      rawConfig = fromMaybe Form.initialState conf
+      rawConfig = fromMaybe Form.initialState.chartConfiguration conf
       chartConfig = case st.chartType of
         Pie | not $ F.any isSelected rawConfig.series → Nothing
         Pie | not $ F.any isSelected rawConfig.measures → Nothing
@@ -320,6 +376,7 @@ cardEval = case _ of
         Line | not $ F.any isSelected rawConfig.measures → Nothing
         Area | not $ F.any isSelected rawConfig.dimensions → Nothing
         Area | not $ F.any isSelected rawConfig.measures → Nothing
+        Scatter | not $ F.any isSelected rawConfig.measures → Nothing
         _ → Just rawConfig
 
     pure ∘ k $ Card.ChartOptions
@@ -330,6 +387,8 @@ cardEval = case _ of
           , axisLabelAngle: st.axisLabelAngle
           , areaStacked: st.areaStacked
           , smooth: st.smooth
+          , bubbleMinSize: st.bubbleMinSize
+          , bubbleMaxSize: st.bubbleMaxSize
           }
       }
   CC.Load card next → do
@@ -340,7 +399,7 @@ cardEval = case _ of
         for_ model.chartConfig \conf →
           H.query st.chartType
             $ left
-            $ H.action $ Form.SetConfiguration conf
+            $ H.action $ Form.SetState (Tuple st.chartType conf)
         pure unit
       _ → pure unit
     pure next
@@ -360,23 +419,25 @@ configure ∷ DSL Unit
 configure = void do
   axes ← H.gets _.axes
   pieConf ← getOrInitial Pie
-  setConfFor Pie $ pieBarConfiguration axes pieConf
+  setStateFor Pie $ pieBarConfiguration axes pieConf
   lineConf ← getOrInitial Line
-  setConfFor Line $ lineConfiguration axes lineConf
+  setStateFor Line $ lineConfiguration axes lineConf
   barConf ← getOrInitial Bar
-  setConfFor Bar $ pieBarConfiguration axes barConf
+  setStateFor Bar $ pieBarConfiguration axes barConf
   areaConf ← getOrInitial Area
-  setConfFor Area $ areaConfiguration axes areaConf
+  setStateFor Area $ areaConfiguration axes areaConf
+  scatterConf ← getOrInitial Scatter
+  setStateFor Scatter $ scatterConfiguration axes scatterConf
   where
   getOrInitial ∷ ChartType → DSL ChartConfiguration
   getOrInitial ty =
-    map (fromMaybe Form.initialState)
+    map (fromMaybe Form.initialState.chartConfiguration)
       $ H.query ty
       $ left (H.request Form.GetConfiguration)
 
-  setConfFor ∷ ChartType → ChartConfiguration → DSL Unit
-  setConfFor ty conf =
-    void $ H.query ty $ left $ H.action $ Form.SetConfiguration conf
+  setStateFor ∷ ChartType → ChartConfiguration → DSL Unit
+  setStateFor ty conf =
+    void $ H.query ty $ left $ H.action $ Form.SetState (Tuple ty conf)
 
   setPreviousValueFrom
     ∷ ∀ a. (Eq a) ⇒ Maybe (Select a) → Select a → Select a
@@ -477,5 +538,38 @@ configure = void do
        , aggregations: [firstAggregation, secondAggregation]
        }
 
+  scatterConfiguration ∷ Axes → ChartConfiguration → ChartConfiguration
+  scatterConfiguration axes current =
+    let allAxises = (axes.category ⊕ axes.time ⊕ axes.value)
+        firstMeasures =
+          setPreviousValueFrom (index current.measures 0)
+          $ autoSelect $ newSelect $ axes.value
+        secondMeasures =
+          setPreviousValueFrom (index current.measures 1)
+          $ autoSelect $ newSelect $ depends firstMeasures
+          $ axes.value ⊝ firstMeasures
+        thirdMeasures =
+          setPreviousValueFrom (index current.measures 2)
+          $ autoSelect $ newSelect $ axes.value
+        firstSeries =
+          setPreviousValueFrom (index current.series 0)
+          $ newSelect $ ifSelected [secondMeasures]
+          $ allAxises
+        secondSeries =
+          setPreviousValueFrom (index current.series 1)
+          $ newSelect $ ifSelected [firstSeries]
+          $ allAxises ⊝ firstSeries
+        firstAggregation =
+          setPreviousValueFrom (index current.aggregations 0) aggregationSelectWithNone
+        secondAggregation =
+          setPreviousValueFrom (index current.aggregations 1) aggregationSelectWithNone
+        thirdAggregation =
+          setPreviousValueFrom (index current.aggregations 2) aggregationSelectWithNone
+    in { series: [firstSeries, secondSeries]
+       , dimensions: []
+       , measures: [firstMeasures, secondMeasures, thirdMeasures]
+       , aggregations: [firstAggregation, secondAggregation]
+       }
+  
 peek ∷ ∀ a. H.ChildF ChartType Form.QueryP a → DSL Unit
 peek _ = configure *> CC.raiseUpdatedP' CC.EvalModelUpdate

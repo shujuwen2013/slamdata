@@ -23,7 +23,7 @@ import Control.Monad.Eff.Exception as Exn
 import Control.Monad.Error.Class as EC
 
 import Data.Argonaut (JCursor)
-import Data.Array (cons, length, null)
+import Data.Array (cons, length, null, catMaybes)
 import Data.Lens ((^?))
 import Data.Lens as Lens
 import Data.Set as Set
@@ -74,13 +74,8 @@ eval info model = do
     sample = analyzeJArray recordSample
     axes = getAxes sample
     available =
-      if null axes.value
-      then []
-      else if not $ null axes.category
-           then [ Pie, Bar, Line, Area ]
-           else if (null axes.time) ∧ (length axes.value < 2)
-                then []
-                else [ Line, Area ]
+      catMaybes $ map (\x → x axes) 
+        [ getMaybePie, getMaybeBar, getMaybeLine, getMaybeArea, getMaybeScatter ]
 
   when (null available)
     $ EC.throwError "There is no available chart types for this data"
@@ -116,3 +111,40 @@ eval info model = do
     | Ax.isValAxis axis = accum { value = cons cursor accum.value }
     | Ax.isTimeAxis axis = accum { time = cons cursor accum.time }
     | otherwise = accum
+
+  getMaybePie ∷ {category ∷ Array JCursor, value ∷ Array JCursor, time ∷ Array JCursor} → 
+    Maybe ChartType
+  getMaybePie axes = 
+    if (not $ null axes.value) ∧ (not $ null axes.category)
+    then Just Pie
+    else Nothing
+
+  getMaybeBar ∷ {category ∷ Array JCursor, value ∷ Array JCursor, time ∷ Array JCursor} → 
+    Maybe ChartType
+  getMaybeBar axes = 
+    if (not $ null axes.value) ∧ (not $ null axes.category)
+    then Just Bar
+    else Nothing
+
+  getMaybeLine ∷ {category ∷ Array JCursor, value ∷ Array JCursor, time ∷ Array JCursor} → 
+    Maybe ChartType
+  getMaybeLine axes = 
+    if ((not $ null axes.value) ∧ (not $ null axes.category)) || 
+       ((not $ null axes.value) ∧ (not $ null axes.time))
+    then Just Line
+    else Nothing
+
+  getMaybeArea ∷ {category ∷ Array JCursor, value ∷ Array JCursor, time ∷ Array JCursor} → 
+    Maybe ChartType
+  getMaybeArea axes = 
+    if ((not $ null axes.value) ∧ (not $ null axes.category)) || 
+       ((not $ null axes.value) ∧ (not $ null axes.time))
+    then Just Area
+    else Nothing
+
+  getMaybeScatter ∷ {category ∷ Array JCursor, value ∷ Array JCursor, time ∷ Array JCursor} → 
+    Maybe ChartType
+  getMaybeScatter axes = 
+    if length axes.value >= 2
+    then Just Scatter
+    else Nothing

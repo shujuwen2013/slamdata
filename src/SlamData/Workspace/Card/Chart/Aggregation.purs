@@ -19,7 +19,7 @@ module SlamData.Workspace.Card.Chart.Aggregation where
 import SlamData.Prelude
 
 import Data.Argonaut (fromString, class EncodeJson, class DecodeJson, decodeJson)
-import Data.Foldable (sum, product)
+import Data.Foldable (sum, product, maximum, minimum)
 import Data.List as L
 
 import SlamData.Form.Select (class OptionVal, Select(..))
@@ -33,10 +33,21 @@ data Aggregation
   | Average
   | Sum
   | Product
+  | None
 
 allAggregations ∷ Array Aggregation
 allAggregations =
   [ Maximum
+  , Minimum
+  , Average
+  , Sum
+  , Product
+  ]
+
+allAggregationsWithNone ∷ Array Aggregation
+allAggregationsWithNone =
+  [ None
+  , Maximum
   , Minimum
   , Average
   , Sum
@@ -52,6 +63,8 @@ printAggregation Minimum = "Minimum"
 printAggregation Average = "Average"
 printAggregation Sum = "Sum"
 printAggregation Product = "Product"
+printAggregation None = "None"
+
 
 parseAggregation ∷ String → Either String Aggregation
 parseAggregation "Maximum" = pure Maximum
@@ -59,6 +72,7 @@ parseAggregation "Minimum" = pure Minimum
 parseAggregation "Average" = pure Average
 parseAggregation "Sum" = pure Sum
 parseAggregation "Product" = pure Product
+parseAggregation "None" = pure None
 parseAggregation _ = Left "Incorrect aggregation string"
 
 runAggregation
@@ -66,22 +80,30 @@ runAggregation
   . (Ord a, ModuloSemiring a, Foldable f)
   ⇒ Aggregation
   → f a
-  → a
-runAggregation Maximum nums = foldl (\b a → if b > a then b else a) zero nums
-runAggregation Minimum nums = foldl (\b a → if b > a then a else b) zero nums
-runAggregation Average nums =
+  → Maybe a
+runAggregation Maximum nums = Just $ fromMaybe zero $ maximum nums
+runAggregation Minimum nums = Just $ fromMaybe zero $ minimum nums
+runAggregation Average nums = Just $ 
   normalize
   $ foldl (\acc a → bimap (add one) (add a) acc)  (Tuple zero zero) nums
   where
   normalize (Tuple count sum) = sum / count
-runAggregation Sum nums = sum nums
-runAggregation Product nums = product nums
+runAggregation Sum nums = Just $ sum nums
+runAggregation Product nums = Just $ product nums
+runAggregation None nums = Nothing
 
 aggregationSelect ∷ Select Aggregation
 aggregationSelect =
   Select
      { value: Just Sum
      , options: allAggregations
+     }
+
+aggregationSelectWithNone ∷ Select Aggregation
+aggregationSelectWithNone =
+  Select
+     { value: Just None
+     , options: allAggregationsWithNone
      }
 
 

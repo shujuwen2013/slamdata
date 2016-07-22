@@ -186,16 +186,24 @@ getShadeColor hex alpha =
         (fromHexString hex)) 
       0.95) 
     alpha
-  where
-  lightenTo :: Color → Number → Color
-  lightenTo col l' = hsla c.h c.s l' c.a
-    where
-    c = toHSLA col
 
-  setAlpha :: Color → Number → Color
-  setAlpha col a' = hsla c.h c.s c.l a'
-    where
-    c = toHSLA col 
+getTransparentColor ∷ String → Number → Color
+getTransparentColor hex alpha =
+  setAlpha  
+    (fromMaybe 
+      (hsla 0.0 0.0 0.0 1.0)  
+      (fromHexString hex))
+    alpha
+
+lightenTo ∷ Color → Number → Color
+lightenTo col l' = hsla c.h c.s l' c.a
+  where
+  c = toHSLA col
+
+setAlpha ∷ Color → Number → Color
+setAlpha col a' = hsla c.h c.s c.l a'
+  where
+  c = toHSLA col 
 
 toRGBAString ∷ Color → String
 toRGBAString col = "rgba(" <> show c.r <> ", "
@@ -295,7 +303,13 @@ pieBarRawData (Cons (Just category) cs) (Cons mbFirstSerie fss)
   alterFn v vals = pure $ cons v $ fromMaybe [] vals
 
 aggregate ∷ Aggregation → LabeledPoints → PieBarData
-aggregate agg acc = map (runAggregation agg) acc
+aggregate agg acc = case agg of
+  -- 'None' aggreation is not suitable for Pie and Bar Chart
+  -- avoid 'None' aggreation by controlling the options in aggreation selector
+  -- in case that aggreation is 'None', coerce it to be replaced by 'Sum'
+  None → map (fromMaybe zero <<< runAggregation Sum) acc
+  -- aggreations other than 'None' always generate vaild (Just) values
+  _ → map (fromMaybe zero <<< runAggregation agg) acc
 
 
 -- Having array of pairs Key → Number and array of categories (String)

@@ -132,10 +132,17 @@ lineRawData
     case fromMaybe (Tuple [] []) acc of
       Tuple v1s v2s → pure $ Tuple (cons v1 v1s) (cons v2 v2s)
 
-
+-- 'None' aggreation is not suitable for Area Chart
+-- avoid 'None' aggreation by controlling the options in aggreation selector
+-- in case that aggreation is 'None', coerce it to be replaced by 'Sum'
+-- aggreations other than 'None' always generate vaild (Just) values
 aggregatePairs ∷ Aggregation → Aggregation → LabeledPointPairs → LineData
-aggregatePairs fAgg sAgg lp =
-  M.toList $ map (bimap (runAggregation fAgg) (runAggregation sAgg)) lp
+aggregatePairs fAgg sAgg lp = 
+  M.toList $ map 
+    ( bimap 
+        (fromMaybe zero <<< runAggregation (if fAgg == None then Sum else fAgg)) 
+        (fromMaybe zero <<< runAggregation (if sAgg == None then Sum else sAgg))
+    ) lp
 
 buildArea
   ∷ M.Map JCursor Ax.Axis
@@ -237,8 +244,8 @@ buildArea axises angle size stacked smooth conf = case preSeries of
         }
       , axisLine = Just $ EC.AxisLine EC.axisLineDefault 
         { lineStyle = Just $ EC.AxisLineStyle EC.axisLineStyleDefault 
-            { color = Just ([Tuple 1.0 "rgba(184,184,184,0.8)"])
-            , width = Just 1.0
+            { color = Just "rgba(184,184,184,0.8)"
+            , width = Just 0.5
             }
         }
       , splitLine = Just $ EC.AxisSplitLine EC.axisSplitLineDefault 
@@ -296,7 +303,7 @@ mkSeries needTwoAxis (Tuple ty interval_) lData stacked smooth =
         }
       , axisLine = Just $ EC.AxisLine EC.axisLineDefault 
         { lineStyle = Just $ EC.AxisLineStyle EC.axisLineStyleDefault 
-          { color = Just ([Tuple 1.0 "rgba(184,184,184,0.8)"])
+          { color = Just "rgba(184,184,184,0.8)"
           , width = Just 1.0
           }
         }
@@ -378,12 +385,14 @@ mkSeries needTwoAxis (Tuple ty interval_) lData stacked smooth =
                         (1-2*(Int.round ix)) * (mod ind (A.length colors)) )            
               , lineStyle = Just $ EC.LineStyle EC.lineStyleDefault 
                   { width = Just 2.0 }
-              , areaStyle = Just $ EC.AreaStyle $ toRGBAString $ getShadeColor
-                  (fromMaybe "#000000" $ colors !! 
-                    ( (Int.round ix) * ((A.length colors)-1) + 
+              , areaStyle = Just $ EC.AreaStyle EC.areaStyleDefault
+                  { color = Just $ EC.SimpleColor $ toRGBAString $ getShadeColor
+                    (fromMaybe "#000000" $ colors !! 
+                      ( (Int.round ix) * ((A.length colors)-1) + 
                         (1-2*(Int.round ix)) * (mod ind (A.length colors)) )            
-                  )
-                  (if stacked then 1.0 else 0.5)
+                    )
+                    (if stacked then 1.0 else 0.5)
+                  } 
               }     
             }
         }
