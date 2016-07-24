@@ -223,10 +223,10 @@ renderDimensions state =
   , boolChartInput CSS.chartDetailParam "If smooth"
       (_.smooth) ToggleSetSmooth (not $ isArea state.chartType)
   , numChartInput CSS.axisLabelParam "Min size of circle"
-      (_.bubbleMinSize) 1 (_.bubbleMaxSize) SetBubbleMinSize 
+      (_.bubbleMinSize) UpperBoundaryCtrl (_.bubbleMaxSize) SetBubbleMinSize 
         (not $ isScatter state.chartType)
   , numChartInput CSS.axisLabelParam "Max size of circle"
-      (_.bubbleMaxSize) 0 (_.bubbleMinSize) SetBubbleMaxSize 
+      (_.bubbleMaxSize) LowerBoundaryCtrl (_.bubbleMinSize) SetBubbleMaxSize 
         (not $ isScatter state.chartType)
   ]
   where
@@ -257,12 +257,11 @@ renderDimensions state =
     ∷ HH.ClassName
     → String
     → (VCS.State → Number)
-    -- 0: lower boundary; 1: upper boundary
-    → Int
+    → BoundaryCtrl
     → (VCS.State → Number)
     → (Number → Unit → Query Unit)
     → Boolean → HTML
-  numChartInput cls labelText getCurrentVal ind getBoudary queryCtor isHidden =
+  numChartInput cls labelText getCurrentVal bc getBoudary queryCtor isHidden =
     HH.form
       [ HP.classes
           $ [ B.colXs6, cls ]
@@ -276,7 +275,7 @@ renderDimensions state =
           , ARIA.label labelText
           , HE.onValueChange
               $ pure ∘ map (right ∘ flip queryCtor unit) ∘ 
-                stringToNum (getCurrentVal state) ind (getBoudary state)
+                stringToNum (getCurrentVal state) bc (getBoudary state)
           ]
       ]
   
@@ -312,19 +311,21 @@ renderDimensions state =
   stringToInt ∷ String → Maybe Int
   stringToInt s = if s ≡ "" then Just 0 else Int.fromString s
 
-  stringToNum ∷ Number → Int → Number → String → Maybe Number
-  stringToNum currentVal ind boundary s = 
+  stringToNum ∷ Number → BoundaryCtrl → Number → String → Maybe Number
+  stringToNum currentVal bc boundary s = 
     if (isNaN $ readFloat s) || ((readFloat s) < 0.0)
     then Just currentVal 
-    else case ind of
-      0 → if (readFloat s) < boundary
+    else case bc of
+      LowerBoundaryCtrl → if (readFloat s) < boundary
           then Just boundary
           else Just $ readFloat s
-      1 → if (readFloat s) > boundary
+      UpperBoundaryCtrl → if (readFloat s) > boundary
           then Just boundary
           else Just $ readFloat s
-      _ → Just $ readFloat s
-    
+  
+data BoundaryCtrl
+  = LowerBoundaryCtrl
+  | UpperBoundaryCtrl
 
 -- Note: need to put running to state
 eval ∷ QueryC ~> DSL

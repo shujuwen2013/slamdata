@@ -382,15 +382,15 @@ mkSeries needTwoAxis (Tuple ty interval_) lData stacked smooth =
             { normal = Just $ EC.IStyle EC.istyleDefault 
               { color = Just $ EC.SimpleColor $
                   fromMaybe "#000000" $ colors !! 
-                    ( (Int.round ix) * ((A.length colors)-1) + 
-                        (1-2*(Int.round ix)) * (mod ind (A.length colors)) )            
+                    ( (Int.round ix) * ((A.length colors) - 1) + 
+                        (1 - 2 * (Int.round ix)) * (mod ind (A.length colors)) )            
               , lineStyle = Just $ EC.LineStyle EC.lineStyleDefault 
                   { width = Just 2.0 }
               , areaStyle = Just $ EC.AreaStyle EC.areaStyleDefault
                   { color = Just $ EC.SimpleColor $ toRGBAString $ getShadeColor
                     (fromMaybe "#000000" $ colors !! 
-                      ( (Int.round ix) * ((A.length colors)-1) + 
-                        (1-2*(Int.round ix)) * (mod ind (A.length colors)) )            
+                      ( (Int.round ix) * ((A.length colors) - 1) + 
+                        (1 - 2 * (Int.round ix)) * (mod ind (A.length colors)) )            
                     )
                     (if stacked then 1.0 else 0.5)
                   } 

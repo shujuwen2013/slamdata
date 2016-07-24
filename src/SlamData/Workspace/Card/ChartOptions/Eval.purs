@@ -35,7 +35,7 @@ import SlamData.Workspace.Card.Eval.CardEvalT as CET
 import SlamData.Workspace.Card.Port as Port
 import SlamData.Workspace.Card.ChartOptions.Model as ChartOptions
 import SlamData.Workspace.Card.Chart.ChartType (ChartType(..))
-import SlamData.Workspace.Card.Chart.Axis (Axis, analyzeJArray)
+import SlamData.Workspace.Card.Chart.Axis (Axis, Axes, analyzeJArray)
 import SlamData.Workspace.Card.Chart.Axis as Ax
 
 eval
@@ -96,55 +96,38 @@ eval info model = do
     , axes
     }
   where
-  getAxes
-    ∷ Map.Map JCursor Axis
-    → {category ∷ Array JCursor, value ∷ Array JCursor, time ∷ Array JCursor}
+  getAxes ∷ Map.Map JCursor Axis → Axes
   getAxes sample =
     foldl foldFn {category: [], value: [], time: []} $ Map.toList sample
 
-  foldFn
-    ∷ {category ∷ Array JCursor, value ∷ Array JCursor, time ∷ Array JCursor}
-    → JCursor × Axis
-    → {category ∷ Array JCursor, value ∷ Array JCursor, time ∷ Array JCursor}
+  foldFn ∷ Axes → JCursor × Axis → Axes
   foldFn accum (cursor × axis)
     | Ax.isCatAxis axis = accum { category = cons cursor accum.category }
     | Ax.isValAxis axis = accum { value = cons cursor accum.value }
     | Ax.isTimeAxis axis = accum { time = cons cursor accum.time }
     | otherwise = accum
 
-  getMaybePie ∷ {category ∷ Array JCursor, value ∷ Array JCursor, time ∷ Array JCursor} → 
-    Maybe ChartType
-  getMaybePie axes = 
-    if (not $ null axes.value) ∧ (not $ null axes.category)
-    then Just Pie
-    else Nothing
+  getMaybePie ∷ Axes → Maybe ChartType
+  getMaybePie axes = do
+    guard $ (not $ null axes.value) ∧ (not $ null axes.category)
+    pure Pie
 
-  getMaybeBar ∷ {category ∷ Array JCursor, value ∷ Array JCursor, time ∷ Array JCursor} → 
-    Maybe ChartType
-  getMaybeBar axes = 
-    if (not $ null axes.value) ∧ (not $ null axes.category)
-    then Just Bar
-    else Nothing
+  getMaybeBar ∷ Axes → Maybe ChartType
+  getMaybeBar axes = do
+    guard $ (not $ null axes.value) ∧ (not $ null axes.category)
+    pure Bar
 
-  getMaybeLine ∷ {category ∷ Array JCursor, value ∷ Array JCursor, time ∷ Array JCursor} → 
-    Maybe ChartType
-  getMaybeLine axes = 
-    if ((not $ null axes.value) ∧ (not $ null axes.category)) || 
-       ((not $ null axes.value) ∧ (not $ null axes.time))
-    then Just Line
-    else Nothing
+  getMaybeLine ∷ Axes → Maybe ChartType
+  getMaybeLine axes = do
+    guard $ (not $ null axes.value) ∧ ((not $ null axes.category) || (not $ null axes.time))
+    pure Line
 
-  getMaybeArea ∷ {category ∷ Array JCursor, value ∷ Array JCursor, time ∷ Array JCursor} → 
-    Maybe ChartType
-  getMaybeArea axes = 
-    if ((not $ null axes.value) ∧ (not $ null axes.category)) || 
-       ((not $ null axes.value) ∧ (not $ null axes.time))
-    then Just Area
-    else Nothing
+  getMaybeArea ∷ Axes → Maybe ChartType
+  getMaybeArea axes = do
+    guard $ (not $ null axes.value) || ((not $ null axes.category) || (not $ null axes.time))
+    pure Area
 
-  getMaybeScatter ∷ {category ∷ Array JCursor, value ∷ Array JCursor, time ∷ Array JCursor} → 
-    Maybe ChartType
-  getMaybeScatter axes = 
-    if length axes.value >= 2
-    then Just Scatter
-    else Nothing
+  getMaybeScatter ∷ Axes → Maybe ChartType
+  getMaybeScatter axes = do
+    guard $ length axes.value >= 2
+    pure Scatter

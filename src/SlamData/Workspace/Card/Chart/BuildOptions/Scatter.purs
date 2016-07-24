@@ -19,10 +19,10 @@ module SlamData.Workspace.Card.Chart.BuildOptions.Scatter where
 import SlamData.Prelude
 
 import Data.Argonaut (JCursor)
-import Data.Array ((!!), nub, length, range, index, sort, reverse, concat)
 import Data.Array as A
 import Data.Function (on)
-import Data.List (List(..), zip, catMaybes, null, head, groupBy, sortBy,fromList, singleton)
+import Data.List as L
+import Data.List (List(..))
 import Data.Map (Map)
 import Data.Maybe.Unsafe (fromJust)
 
@@ -37,58 +37,65 @@ import SlamData.Workspace.Card.Chart.BuildOptions.Common (SeriesKey, ChartAxises
 type ScatterData = Array (Tuple String (Array (Tuple (Array Number) (Maybe Number))))
 
 scatterData ∷ ChartAxises → ScatterData
-
-scatterData axises = fromList $ 
+scatterData axises = L.fromList  
   --output sample: ( Tuple "A" ((Tuple [1,1] 3) : (Tuple [2,2] 6)) : Tuple "B" ((Tuple [1,1] 9)) ) 
-  catMaybes $ map combine $
+  $ L.catMaybes 
+  $ map combine
   --output sample: ( (Tuple "A" (Tuple [1,1] 3) : Tuple "A" (Tuple [2,2] 6)) : (Tuple "B" (Tuple [1,1] 9)) )
-  groupBy ((==) `on` fst) $ sortBy (compare `on` fst) $
+  $ L.groupBy ((==) `on` fst) 
+  $ L.sortBy (compare `on` fst)
   --output sample: ( Tuple "A" (Tuple [1,1] 3): Tuple "A" (Tuple [2,2] 6): Tuple "B" (Tuple [1,1] 9) )
-  catMaybes $ map mkPoint $
-    tagSeriesKey seriesKeys $      
-      map (\x → Tuple [fst $ fst x, snd $ fst x] (snd x)) (zip (zip firstValues secondValues) thirdValues)
+  $ L.catMaybes 
+  $ map mkPoint 
+  $ tagSeriesKey seriesKeys 
+  $ map 
+      (\x → Tuple [fst $ fst x, snd $ fst x] (snd x)) 
+      (L.zip (L.zip firstValues secondValues) thirdValues)
 
   where
   firstValues ∷ List (Maybe Number)
-  firstValues = fromMaybe Nil $ axises.measures !! 0
+  firstValues = fromMaybe Nil $ A.index axises.measures 0
 
   secondValues ∷ List (Maybe Number)
-  secondValues = fromMaybe Nil $ axises.measures !! 1
+  secondValues = fromMaybe Nil $ A.index axises.measures 1
 
   thirdValues ∷ List (Maybe Number)
-  thirdValues = fromMaybe (map (\x → Nothing) firstValues) (axises.measures !! 2)
+  thirdValues = fromMaybe (map (const Nothing) firstValues) (A.index axises.measures 2)
 
   firstSeries ∷ List (Maybe String)
-  firstSeries = fromMaybe Nil $ axises.series !! 0
+  firstSeries = fromMaybe Nil $ A.index axises.series 0
 
   secondSeries ∷ List (Maybe String)
-  secondSeries = fromMaybe Nil $ axises.series !! 1
+  secondSeries = fromMaybe Nil $ A.index axises.series 1
 
   firstAgg ∷ Aggregation
-  firstAgg = fromMaybe None $ join (axises.aggregations !! 0)
+  firstAgg = fromMaybe None $ join (A.index axises.aggregations 0)
 
   secondAgg ∷ Aggregation
-  secondAgg = fromMaybe None $ join (axises.aggregations !! 1)
+  secondAgg = fromMaybe None $ join (A.index axises.aggregations 1)
 
   thirdAgg ∷ Aggregation
-  thirdAgg = fromMaybe None $ join (axises.aggregations !! 2)
+  thirdAgg = fromMaybe None $ join (A.index axises.aggregations 2)
 
-  tagSeriesKey ∷ List SeriesKey → List (Tuple (Array (Maybe Number)) (Maybe Number)) → 
-    List (Tuple SeriesKey (Tuple (Array (Maybe Number)) (Maybe Number)))
-  tagSeriesKey k v = case null k of
+  tagSeriesKey 
+    ∷ List SeriesKey 
+    → List (Tuple (Array (Maybe Number)) (Maybe Number)) 
+    → List (Tuple SeriesKey (Tuple (Array (Maybe Number)) (Maybe Number)))
+  tagSeriesKey k v = case L.null k of
     true → map (Tuple Nothing) v
-    false → zip k v
+    false → L.zip k v
 
-  mkPoint ∷ Tuple SeriesKey (Tuple (Array (Maybe Number)) (Maybe Number)) → 
-    Maybe (Tuple String (Tuple (Array Number) (Maybe Number)))
-  mkPoint (Tuple a (Tuple [v1, v2] v3)) = case isJust $ axises.measures !! 2 of
-    true → 
+  mkPoint 
+    ∷ Tuple SeriesKey (Tuple (Array (Maybe Number)) (Maybe Number)) 
+    → Maybe (Tuple String (Tuple (Array Number) (Maybe Number)))
+  mkPoint (Tuple a (Tuple [v1, v2] v3)) = case A.index axises.measures 2 of
+    Just m → 
       case (isJust v1) && (isJust v2) && (isJust v3) of
         true → Just $ Tuple 
           (keyName (Tuple "" a))
           (Tuple [fromJust v1, fromJust v2] v3)
         _ → Nothing
-    false → case (isJust v1) && (isJust v2) of
+    Nothing → case (isJust v1) && (isJust v2) of
         true → Just $ Tuple 
           (keyName (Tuple "" a))
           (Tuple [fromJust v1, fromJust v2] v3)
@@ -96,30 +103,27 @@ scatterData axises = fromList $
   mkPoint (Tuple _ (Tuple _ _)) = Nothing
   
   seriesKeys ∷ List SeriesKey
-  seriesKeys = case null firstSeries of
-    true → Nil 
-    _ → case null secondSeries of
-      true → map (flip mkSeriesKey Nothing) firstSeries
-      _ → map (mkSeriesKey <$> fst <*> snd) (zip firstSeries secondSeries)
+  seriesKeys = map (mkSeriesKey <$> fst <*> snd) 
+    (L.zip firstSeries $ secondSeries <> map (const Nothing) firstSeries)
   
   mkSeriesKey ∷ Maybe String → Maybe String → SeriesKey
   mkSeriesKey f s =
     f >>= \f → pure $ Tuple f s
   
-  combine ∷ List (Tuple String (Tuple (Array Number) (Maybe Number))) → 
-    Maybe (Tuple String (Array (Tuple (Array Number) (Maybe Number))))
-  combine x = case head x of
-    Just t → Just $ Tuple 
-      (fst t) 
-      (fromList $ applyAggregation $ map snd x)
-    _ → Nothing
+  combine 
+    ∷ List (Tuple String (Tuple (Array Number) (Maybe Number))) 
+    → Maybe (Tuple String (Array (Tuple (Array Number) (Maybe Number))))
+  combine x = do 
+    y <- (L.head $ map fst x)
+    pure $ Tuple y (L.fromList $ applyAggregation $ map snd x)
 
-  applyAggregation ∷ List (Tuple (Array Number) (Maybe Number)) → 
-    List (Tuple (Array Number) (Maybe Number))
+  applyAggregation 
+    ∷ List (Tuple (Array Number) (Maybe Number)) 
+    → List (Tuple (Array Number) (Maybe Number))
   applyAggregation l =
     let
-      fv = catMaybes $ map (flip index 0 <<< fst) l
-      sv = catMaybes $ map (flip index 1 <<< fst) l
+      fv = L.catMaybes $ map (flip A.index 0 <<< fst) l
+      sv = L.catMaybes $ map (flip A.index 1 <<< fst) l
       tv = map snd l
       fv' = applyAggregation' firstAgg fv
       sv' = applyAggregation' secondAgg sv
@@ -128,23 +132,26 @@ scatterData axises = fromList $
       case [(firstAgg == None), (secondAgg == None), (thirdAgg == None)] of
         [true, true, true] → l
         [false, false, false] → 
-          singleton
-            (Tuple [fromMaybe zero $ head fv', fromMaybe zero $ head sv'] 
-              (fromMaybe Nothing $ head tv'))
+          L.singleton
+            (Tuple [fromMaybe zero $ L.head fv', fromMaybe zero $ L.head sv'] 
+              (fromMaybe Nothing $ L.head tv'))
         _ → 
-          map (\x → Tuple [fst $ fst x, snd $ fst x] (snd x)) (zip (zip fv' sv') tv')
+          map (\x → Tuple [fst $ fst x, snd $ fst x] (snd x)) (L.zip (L.zip fv' sv') tv')
     where
     applyAggregation' ∷ Aggregation → List Number → List Number
     applyAggregation' agg vs =
       if agg == None
       then vs
       else let v = fromMaybe zero $ runAggregation agg vs
-           in map (\x → v) vs
+           in map (\_ → v) vs
     applyAggregation'' ∷ Aggregation → List (Maybe Number) → List (Maybe Number)
     applyAggregation'' agg vs =
       if agg == None
       then vs
-      else if isJust $ axises.measures !! 2
+      else if isJust $ A.index axises.measures 2
+      -- When (isJust $ A.index axises.measures 2) is true, the function mkPoint 
+      -- will filter out all Nothing values in thirdValues, so vs here contains no 
+      -- Nothing values and fromJust is safe.
            then let v = fromMaybe zero $ runAggregation agg $ map fromJust vs
                 in map (\x → Just v) vs
            else vs
@@ -152,10 +159,10 @@ scatterData axises = fromList $
 
 buildScatter
   ∷ Map JCursor Ax.Axis
-   → Number
-   → Number
-   → ChartConfiguration
-   → EC.Option
+  → Number
+  → Number
+  → ChartConfiguration
+  → EC.Option
 buildScatter axises bubbleMinSize bubbleMaxSize conf = case preSeries of
   series →
     EC.Option EC.optionDefault
@@ -193,7 +200,7 @@ buildScatter axises bubbleMinSize bubbleMaxSize conf = case preSeries of
     }
 
   extractNames ∷ Array EC.Series → Array String
-  extractNames ss = nub $ A.catMaybes $ map extractName ss
+  extractNames ss = A.nub $ A.catMaybes $ map extractName ss
 
   extractName ∷ EC.Series → Maybe String
   extractName (EC.ScatterSeries r) = r.common.name
@@ -234,17 +241,18 @@ buildScatter axises bubbleMinSize bubbleMaxSize conf = case preSeries of
 
 mkSeries
   ∷ ScatterData
-   → Number
-   → Number
-   → (Array EC.Series)
+  → Number
+  → Number
+  → (Array EC.Series)
 mkSeries sData bubbleMinSize bubbleMaxSize =
   series
   where
   series ∷ Array EC.Series
-  series = map serie (A.zip (range 0 ((length sData)-1)) sData)
+  series = map serie (A.zip (A.range 0 ((A.length sData) - 1)) sData)
   
-  serie ∷ Tuple Int (Tuple String (Array (Tuple (Array Number) (Maybe Number)))) →
-     EC.Series
+  serie 
+    ∷ Tuple Int (Tuple String (Array (Tuple (Array Number) (Maybe Number)))) 
+    → EC.Series
   serie (Tuple ind (Tuple name nums)) = 
     EC.ScatterSeries 
       { common: EC.universalSeriesDefault 
@@ -254,7 +262,7 @@ mkSeries sData bubbleMinSize bubbleMaxSize =
         , itemStyle = Just $ EC.ItemStyle EC.itemStyleDefault 
           { normal = Just $ EC.IStyle EC.istyleDefault 
             { color = Just $ EC.SimpleColor $ toRGBAString $ getTransparentColor
-                (fromMaybe "#000000" (colors !! (mod ind (length colors)))) 
+                (fromMaybe "#000000" (A.index colors (mod ind (A.length colors)))) 
                 0.5
             }     
           }
@@ -274,8 +282,8 @@ mkSeries sData bubbleMinSize bubbleMaxSize =
     where 
     xyrData ∷ Tuple (Array Number) (Maybe Number) → EC.ItemData
     xyrData a = EC.Value $ 
-      EC.XYR { x: fromMaybe zero $ (fst a) !! 0
-             , y: fromMaybe zero $ (fst a) !! 1
+      EC.XYR { x: fromMaybe zero $ A.index (fst a) 0
+             , y: fromMaybe zero $ A.index (fst a) 1
              , r: snd a
              }
 
@@ -285,16 +293,20 @@ mkSeries sData bubbleMinSize bubbleMaxSize =
       _  → Just (Tuple minVal maxVal)
       where
       thirdValues ∷ Array Number
-      thirdValues = A.catMaybes $ map snd (concat $ map snd sData)
+      thirdValues = A.catMaybes $ map snd (A.concat $ map snd sData)
 
       maxVal ∷ Number 
-      maxVal = fromMaybe zero (A.head $ reverse $ sort thirdValues)
+      maxVal = fromMaybe zero (A.head $ A.reverse $ A.sort thirdValues)
 
       minVal ∷ Number 
-      minVal = fromMaybe zero (A.head $ sort thirdValues)
+      minVal = fromMaybe zero (A.head $ A.sort thirdValues)
 
-    radiusMapper ∷ Number → Number → Number → Number → 
-      (Array Number → Number)
+    radiusMapper 
+      ∷ Number
+      → Number 
+      → Number 
+      → Number 
+      → (Array Number → Number)
     radiusMapper bMin bMax rMin rMax = 
       if rMin == rMax
       then func1
@@ -311,7 +323,7 @@ mkSeries sData bubbleMinSize bubbleMaxSize =
 
       func2 ∷ Array Number → Number
       func2 [x, y, r] =
-        bMin*(1.0-(r-rMin)/(rMax-rMin)) + bMax*(r-rMin)/(rMax-rMin)
+        bMin * (1.0 - (r - rMin) / (rMax - rMin)) + bMax * (r - rMin) / (rMax - rMin)
       -- default circle size 4.0
       func2 _ = 4.0
 
