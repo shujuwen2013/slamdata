@@ -33,21 +33,10 @@ data Aggregation
   | Average
   | Sum
   | Product
-  | None
 
 allAggregations ∷ Array Aggregation
 allAggregations =
   [ Maximum
-  , Minimum
-  , Average
-  , Sum
-  , Product
-  ]
-
-allAggregationsWithNone ∷ Array Aggregation
-allAggregationsWithNone =
-  [ None
-  , Maximum
   , Minimum
   , Average
   , Sum
@@ -63,8 +52,6 @@ printAggregation Minimum = "Minimum"
 printAggregation Average = "Average"
 printAggregation Sum = "Sum"
 printAggregation Product = "Product"
-printAggregation None = "None"
-
 
 parseAggregation ∷ String → Either String Aggregation
 parseAggregation "Maximum" = pure Maximum
@@ -72,7 +59,6 @@ parseAggregation "Minimum" = pure Minimum
 parseAggregation "Average" = pure Average
 parseAggregation "Sum" = pure Sum
 parseAggregation "Product" = pure Product
-parseAggregation "None" = pure None
 parseAggregation _ = Left "Incorrect aggregation string"
 
 runAggregation
@@ -80,30 +66,29 @@ runAggregation
   . (Ord a, ModuloSemiring a, Foldable f)
   ⇒ Aggregation
   → f a
-  → Maybe a
-runAggregation Maximum nums = Just $ fromMaybe zero $ maximum nums
-runAggregation Minimum nums = Just $ fromMaybe zero $ minimum nums
-runAggregation Average nums = Just $ 
+  → a
+runAggregation Maximum nums = fromMaybe zero $ maximum nums
+runAggregation Minimum nums = fromMaybe zero $ minimum nums
+runAggregation Average nums = 
   normalize
   $ foldl (\acc a → bimap (add one) (add a) acc)  (Tuple zero zero) nums
   where
   normalize (Tuple count sum) = sum / count
-runAggregation Sum nums = Just $ sum nums
-runAggregation Product nums = Just $ product nums
-runAggregation None nums = Nothing
+runAggregation Sum nums = sum nums
+runAggregation Product nums = product nums
 
-aggregationSelect ∷ Select Aggregation
+aggregationSelect ∷ Select (Maybe Aggregation)
 aggregationSelect =
   Select
-     { value: Just Sum
-     , options: allAggregations
+     { value: Just $ Just Sum
+     , options: map Just allAggregations
      }
 
-aggregationSelectWithNone ∷ Select Aggregation
+aggregationSelectWithNone ∷ Select (Maybe Aggregation)
 aggregationSelectWithNone =
   Select
-     { value: Just None
-     , options: allAggregationsWithNone
+     { value: Just Nothing
+     , options: [Nothing] <> map Just allAggregations
      }
 
 

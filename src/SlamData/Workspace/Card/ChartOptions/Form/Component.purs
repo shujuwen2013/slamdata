@@ -16,7 +16,8 @@ limitations under the License.
 
 module SlamData.Workspace.Card.ChartOptions.Form.Component
   ( formComponent
-  , initialState
+  , getInitialState
+  , initialConfiguration
   , Query(..)
   , QueryP
   , StateP
@@ -57,7 +58,7 @@ import SlamData.Workspace.Card.Chart.ChartConfiguration (JSelect, ChartConfigura
 import SlamData.Workspace.Card.ChartOptions.Form.Component.CSS as CSS
 
 data Query a
-  = SetState (Tuple ChartType ChartConfiguration) a
+  = SetConfiguration ChartConfiguration a
   | GetConfiguration (ChartConfiguration → a)
 
 type State =
@@ -65,15 +66,18 @@ type State =
   , chartConfiguration ∷ ChartConfiguration
   }
 
-initialState ∷ State
-initialState = 
-  { chartType: Pie
-  , chartConfiguration: 
-    { dimensions: []
-    , series: []
-    , measures: []
-    , aggregations: []
-    }
+getInitialState ∷ ChartType → State
+getInitialState ty = 
+  { chartType: ty
+  , chartConfiguration: initialConfiguration
+  }
+
+initialConfiguration ∷ ChartConfiguration
+initialConfiguration = 
+  { dimensions: []
+  , series: []
+  , measures: []
+  , aggregations: []
   }
 
 type DimensionSlot = Int
@@ -83,14 +87,14 @@ type ChildSlot = Either DimensionSlot (Either SeriesSlot MeasureSlot)
 
 type DimensionQuery = S.Query JCursor
 type SeriesQuery = S.Query JCursor
-type MeasureQuery = P.QueryP Aggregation JCursor
-type MeasureAggQuery = S.Query Aggregation
+type MeasureQuery = P.QueryP (Maybe Aggregation) JCursor
+type MeasureAggQuery = S.Query (Maybe Aggregation)
 type MeasureSelQuery = S.Query JCursor
 type ChildQuery = Coproduct DimensionQuery (Coproduct SeriesQuery MeasureQuery)
 
 type DimensionState = Select JCursor
 type SeriesState = Select JCursor
-type MeasureState = P.StateP Aggregation JCursor
+type MeasureState = P.StateP (Maybe Aggregation) JCursor
 type ChildState = Either DimensionState (Either SeriesState MeasureState)
 
 type FormHTML = H.ParentHTML ChildState Query ChildQuery Slam ChildSlot
@@ -172,7 +176,7 @@ render state = case state.chartType of
         ]
     ]
 
-  renderMeasure ∷ Int → Select Aggregation → JSelect → Array FormHTML
+  renderMeasure ∷ Int → Select (Maybe Aggregation) → JSelect → Array FormHTML
   renderMeasure ix aggSelect sel =
     [ HH.form
         [ CP.nonSubmit
@@ -263,9 +267,9 @@ render state = case state.chartType of
   renderLabel n str = pure $ show n ⊕ "th " ⊕ str
 
 eval ∷ Natural Query FormDSL
-eval (SetState (Tuple ty conf) next) = do
+eval (SetConfiguration conf next) = do
   r ← H.get
-  H.set {chartType: ty, chartConfiguration: conf}
+  H.modify _{chartConfiguration = conf}
   synchronizeDimensions r.chartConfiguration.dimensions conf.dimensions
   synchronizeSeries r.chartConfiguration.series conf.series
   synchronizeMeasures r.chartConfiguration.measures conf.measures
@@ -318,12 +322,12 @@ eval (SetState (Tuple ty conf) next) = do
         ∘ S.SetSelect
 
   synchronizeAggregations
-    ∷ Array (Select Aggregation) → Array (Select Aggregation) → FormDSL Unit
+    ∷ Array (Select (Maybe Aggregation)) → Array (Select (Maybe Aggregation)) → FormDSL Unit
   synchronizeAggregations old new =
     traverse_ (syncAggByIndex old new) $ range 0 $ getLastIndex old new
 
   syncAggByIndex
-    ∷ Array (Select Aggregation) → Array (Select Aggregation) → Int
+    ∷ Array (Select (Maybe Aggregation)) → Array (Select (Maybe Aggregation)) → Int
     → FormDSL Unit
   syncAggByIndex old new i =
     for_ (old !! i) \_ →
@@ -388,13 +392,13 @@ eval (GetConfiguration continue) = do
       $ H.ChildF unit
       $ H.request S.GetSelect
 
-  getAggregations ∷ FormDSL (Array (Select Aggregation))
+  getAggregations ∷ FormDSL (Array (Select (Maybe Aggregation)))
   getAggregations = do
     state ← H.get
     map catMaybes
       $ traverse getAggregation (range' 0 $ length state.chartConfiguration.measures - 1)
 
-  getAggregation ∷ Int → FormDSL (Maybe (Select Aggregation))
+  getAggregation ∷ Int → FormDSL (Maybe (Select (Maybe Aggregation)))
   getAggregation i =
     H.query' cpMeasure i
       $ left

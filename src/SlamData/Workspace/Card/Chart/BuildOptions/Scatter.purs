@@ -28,7 +28,7 @@ import Data.Maybe.Unsafe (fromJust)
 
 import ECharts as EC
 
-import SlamData.Workspace.Card.Chart.Aggregation (Aggregation(..), runAggregation)
+import SlamData.Workspace.Card.Chart.Aggregation (Aggregation, runAggregation)
 import SlamData.Workspace.Card.Chart.Axis as Ax
 import SlamData.Workspace.Card.Chart.ChartConfiguration (ChartConfiguration)
 import SlamData.Workspace.Card.Chart.BuildOptions.Common (SeriesKey, ChartAxises, colors, buildChartAxises, keyName, toRGBAString, getTransparentColor)
@@ -68,14 +68,14 @@ scatterData axises = L.fromList
   secondSeries ∷ List (Maybe String)
   secondSeries = fromMaybe Nil $ A.index axises.series 1
 
-  firstAgg ∷ Aggregation
-  firstAgg = fromMaybe None $ join (A.index axises.aggregations 0)
+  firstAgg ∷ Maybe Aggregation
+  firstAgg = fromMaybe Nothing $ join (A.index axises.aggregations 0)
 
-  secondAgg ∷ Aggregation
-  secondAgg = fromMaybe None $ join (A.index axises.aggregations 1)
+  secondAgg ∷ Maybe Aggregation
+  secondAgg = fromMaybe Nothing $ join (A.index axises.aggregations 1)
 
-  thirdAgg ∷ Aggregation
-  thirdAgg = fromMaybe None $ join (A.index axises.aggregations 2)
+  thirdAgg ∷ Maybe Aggregation
+  thirdAgg = fromMaybe Nothing $ join (A.index axises.aggregations 2)
 
   tagSeriesKey 
     ∷ List SeriesKey 
@@ -129,7 +129,7 @@ scatterData axises = L.fromList
       sv' = applyAggregation' secondAgg sv
       tv' = applyAggregation'' thirdAgg tv
     in
-      case [(firstAgg == None), (secondAgg == None), (thirdAgg == None)] of
+      case [(isNothing firstAgg), (isNothing secondAgg), (isNothing thirdAgg)] of
         [true, true, true] → l
         [false, false, false] → 
           L.singleton
@@ -138,21 +138,21 @@ scatterData axises = L.fromList
         _ → 
           map (\x → Tuple [fst $ fst x, snd $ fst x] (snd x)) (L.zip (L.zip fv' sv') tv')
     where
-    applyAggregation' ∷ Aggregation → List Number → List Number
+    applyAggregation' ∷ Maybe Aggregation → List Number → List Number
     applyAggregation' agg vs =
-      if agg == None
+      if isNothing agg 
       then vs
-      else let v = fromMaybe zero $ runAggregation agg vs
+      else let v = runAggregation (fromJust agg) vs
            in map (\_ → v) vs
-    applyAggregation'' ∷ Aggregation → List (Maybe Number) → List (Maybe Number)
+    applyAggregation'' ∷ Maybe Aggregation → List (Maybe Number) → List (Maybe Number)
     applyAggregation'' agg vs =
-      if agg == None
+      if isNothing agg
       then vs
       else if isJust $ A.index axises.measures 2
       -- When (isJust $ A.index axises.measures 2) is true, the function mkPoint 
       -- will filter out all Nothing values in thirdValues, so vs here contains no 
-      -- Nothing values and fromJust is safe.
-           then let v = fromMaybe zero $ runAggregation agg $ map fromJust vs
+      -- Nothing values and (map fromJust vs) is safe.
+           then let v = runAggregation (fromJust agg) $ map fromJust vs
                 in map (\x → Just v) vs
            else vs
 

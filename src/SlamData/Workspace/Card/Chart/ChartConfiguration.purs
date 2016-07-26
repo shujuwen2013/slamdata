@@ -55,7 +55,7 @@ type ChartConfiguration =
   { series ∷ Array JSelect
   , dimensions ∷ Array JSelect
   , measures ∷ Array JSelect
-  , aggregations ∷ Array (Select Aggregation)
+  , aggregations ∷ Array (Select (Maybe Aggregation))
   }
 
 eqChartConfiguration ∷ ChartConfiguration → ChartConfiguration → Boolean

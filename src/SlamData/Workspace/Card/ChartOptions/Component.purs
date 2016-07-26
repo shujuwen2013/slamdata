@@ -201,7 +201,7 @@ renderChartConfiguration state =
     showIf (state.chartType ≡ ty)
     [ HH.slot ty \_ →
         { component: formComponent
-        , initialState: H.parentState Form.initialState
+        , initialState: H.parentState $ Form.getInitialState ty
         }
     ]
 
@@ -366,7 +366,7 @@ cardEval = case _ of
     st ← H.get
     conf ← H.query st.chartType $ left $ H.request Form.GetConfiguration
     let
-      rawConfig = fromMaybe Form.initialState.chartConfiguration conf
+      rawConfig = fromMaybe Form.initialConfiguration conf
       chartConfig = case st.chartType of
         Pie | not $ F.any isSelected rawConfig.series → Nothing
         Pie | not $ F.any isSelected rawConfig.measures → Nothing
@@ -399,7 +399,7 @@ cardEval = case _ of
         for_ model.chartConfig \conf →
           H.query st.chartType
             $ left
-            $ H.action $ Form.SetState (Tuple st.chartType conf)
+            $ H.action $ Form.SetConfiguration conf
         pure unit
       _ → pure unit
     pure next
@@ -419,25 +419,25 @@ configure ∷ DSL Unit
 configure = void do
   axes ← H.gets _.axes
   pieConf ← getOrInitial Pie
-  setStateFor Pie $ pieBarConfiguration axes pieConf
+  setConfigFor Pie $ pieBarConfiguration axes pieConf
   lineConf ← getOrInitial Line
-  setStateFor Line $ lineConfiguration axes lineConf
+  setConfigFor Line $ lineConfiguration axes lineConf
   barConf ← getOrInitial Bar
-  setStateFor Bar $ pieBarConfiguration axes barConf
+  setConfigFor Bar $ pieBarConfiguration axes barConf
   areaConf ← getOrInitial Area
-  setStateFor Area $ areaConfiguration axes areaConf
+  setConfigFor Area $ areaConfiguration axes areaConf
   scatterConf ← getOrInitial Scatter
-  setStateFor Scatter $ scatterConfiguration axes scatterConf
+  setConfigFor Scatter $ scatterConfiguration axes scatterConf
   where
   getOrInitial ∷ ChartType → DSL ChartConfiguration
   getOrInitial ty =
-    map (fromMaybe Form.initialState.chartConfiguration)
+    map (fromMaybe Form.initialConfiguration)
       $ H.query ty
       $ left (H.request Form.GetConfiguration)
 
-  setStateFor ∷ ChartType → ChartConfiguration → DSL Unit
-  setStateFor ty conf =
-    void $ H.query ty $ left $ H.action $ Form.SetState (Tuple ty conf)
+  setConfigFor ∷ ChartType → ChartConfiguration → DSL Unit
+  setConfigFor ty conf =
+    void $ H.query ty $ left $ H.action $ Form.SetConfiguration conf
 
   setPreviousValueFrom
     ∷ ∀ a. (Eq a) ⇒ Maybe (Select a) → Select a → Select a
