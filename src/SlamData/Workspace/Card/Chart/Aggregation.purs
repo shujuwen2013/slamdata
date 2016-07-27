@@ -106,3 +106,11 @@ instance optionValAggregation ∷ OptionVal Aggregation where
 
 instance arbitraryAggregation ∷ SC.Arbitrary Aggregation where
   arbitrary = Gen.elements defaultAggregation $ L.toList allAggregations
+
+newtype ArbAggregation = ArbAggregation (Maybe Aggregation)
+
+runArbAggregation ∷ ArbAggregation → (Maybe Aggregation)
+runArbAggregation (ArbAggregation m) = m
+
+instance arbitraryArbAggregation ∷ SC.Arbitrary ArbAggregation where
+  arbitrary = ArbAggregation <$> Gen.allInArray (map Just allAggregations)

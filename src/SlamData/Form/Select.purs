@@ -24,8 +24,6 @@ import Data.Argonaut (class DecodeJson, class EncodeJson, JCursor, decodeJson, j
 import Data.Array (filter, length, head, (!!), elemIndex)
 import Data.Lens (LensP, lens, view, (^.), (?~), (.~))
 import Data.Monoid.Conj (Conj(..), runConj)
-import Data.Maybe (isNothing)
-import Data.Maybe.Unsafe (fromJust)
 import Test.StrongCheck as SC
 
 class (Eq a) ⇐ OptionVal a where
@@ -163,12 +161,3 @@ instance arbitrarySelect ∷ (SC.Arbitrary a) ⇒ SC.Arbitrary (Select a) where
     value ← SC.arbitrary
     options ← SC.arbitrary
     pure $ Select { value, options }
-
--- | For (Select (Maybe a)), avoid {value: Just Nothing} 
-instance arbitraryMaybeSelect ∷ (SC.Arbitrary a) ⇒ SC.Arbitrary (Select (Maybe a)) where
-  arbitrary = do
-    value ← SC.arbitrary
-    options ← SC.arbitrary
-    if (isNothing value) then pure $ Select { value, options }
-      else if (isNothing $ fromJust value) then pure $ Select { value: Nothing, options }
-           else pure $ Select { value, options }
